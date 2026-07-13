@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Aerinyu Studios — Where gaming meets discovery." />
+  <title>Aerinyu Studios</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="cursor-light" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="#home" aria-label="Aerinyu Studios home">
+      <img src="assets/logo.png" alt="Aerinyu Studios" class="brand-logo-image" />
+    </a>
+
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="#about">About</a>
+      <a href="#world">Our World</a>
+      <a href="#values">Vision</a>
+      <a href="#join">Join Us</a>
+    </nav>
+
+    <a href="#join" class="header-cta">Enter the studio</a>
+
+    <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span>
+      <span></span>
+    </button>
+  </header>
+
+  <div class="mobile-menu">
+    <a href="#about">About</a>
+    <a href="#world">Our World</a>
+    <a href="#values">Vision</a>
+    <a href="#join">Join Us</a>
+  </div>
+
+  <main>
+    <section class="hero" id="home">
+      <canvas id="particle-canvas" aria-hidden="true"></canvas>
+
+      <div class="metal-wave wave-a"></div>
+      <div class="metal-wave wave-b"></div>
+      <div class="metal-wave wave-c"></div>
+
+      <div class="hero-copy reveal">
+        <p class="kicker">INDEPENDENT GAME DEVELOPMENT STUDIO</p>
+
+        <h1>
+          We build worlds
+          <span>worth discovering.</span>
+        </h1>
+
+        <p class="intro">
+          Aerinyu Studios creates imaginative Roblox experiences shaped by curiosity,
+          polished systems, and memorable worldbuilding.
+        </p>
+
+        <div class="hero-actions">
+          <a class="button button-light magnetic" href="#world">
+            Explore our world
+            <span>↗</span>
+          </a>
+
+          <a class="button button-ghost magnetic" href="#about">
+            Discover Aerinyu
+          </a>
+        </div>
+      </div>
+
+      <div class="hero-symbol" aria-hidden="true">
+        <div class="symbol-ring ring-one"></div>
+        <div class="symbol-ring ring-two"></div>
+
+        <img
+          src="assets/logo.png"
+          alt=""
+          class="hero-logo-image"
+        />
+      </div>
+
+      <div class="scroll-hint">
+        <span>SCROLL TO DISCOVER</span>
+        <i></i>
+      </div>
+    </section>
+
+    <section class="about section-shell" id="about">
+      <div class="section-number reveal">01 / WHO WE ARE</div>
+
+      <div class="two-column">
+        <div class="reveal">
+          <p class="section-kicker">WHERE GAMING MEETS DISCOVERY</p>
+          <h2>Every world begins with a question.</h2>
+        </div>
+
+        <div class="body-copy reveal">
+          <p>
+            What could this become? What would make someone explore, stay, and remember?
+          </p>
+
+          <p>
+            Aerinyu is a growing team of developers, artists, designers, and storytellers
+            creating original game experiences with clear identities and intentional design.
+          </p>
+
+          <p class="highlight">
+            We do not just build games. We discover what they can become.
+          </p>
+        </div>
+      </div>
+
+      <div class="ticker" aria-hidden="true">
+        <div class="ticker-track">
+          <span>DISCOVERY</span><b>△</b>
+          <span>CREATION</span><b>△</b>
+          <span>WORLDBUILDING</span><b>△</b>
+          <span>COLLABORATION</span><b>△</b>
+
+          <span>DISCOVERY</span><b>△</b>
+          <span>CREATION</span><b>△</b>
+          <span>WORLDBUILDING</span><b>△</b>
+          <span>COLLABORATION</span><b>△</b>
+        </div>
+      </div>
+    </section>
+
+    <section class="world section-shell" id="world">
+      <div class="section-number reveal">02 / CURRENTLY IN DEVELOPMENT</div>
+
+      <article class="world-card reveal">
+        <div class="world-image">
+          <div class="moon"></div>
+          <div class="landscape"></div>
+          <div class="scanlines"></div>
+
+          <span class="status">
+            <i></i>
+            PROJECT STATUS: IN DEVELOPMENT
+          </span>
+        </div>
+
+        <div class="world-info">
+          <div>
+            <p class="section-kicker">AERINYU ORIGINAL / ROBLOX</p>
+            <h2>Our first world is taking shape.</h2>
+          </div>
+
+          <div class="body-copy">
+            <p>
+              An original experience built around exploration, progression, and discovery.
+              Designed from the ground up by the Aerinyu team.
+            </p>
+
+            <a class="inline-link" href="#join">
+              Follow the journey
+              <span>→</span>
+            </a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="values section-shell" id="values">
+      <div class="section-number reveal">03 / WHAT GUIDES US</div>
+
+      <div class="section-heading reveal">
+        <div>
+          <p class="section-kicker">OUR CREATIVE PRINCIPLES</p>
+          <h2>Built with intention.</h2>
+        </div>
+
+        <p>Three ideas shape every experience we create.</p>
+      </div>
+
+      <div class="value-grid">
+        <article class="value-card reveal" data-label="01">
+          <span class="value-icon">△</span>
+          <h3>Discovery</h3>
+          <p>
+            We create worlds that reward curiosity and make players want to look closer.
+          </p>
+        </article>
+
+        <article class="value-card reveal" data-label="02">
+          <span class="value-icon">◌</span>
+          <h3>Craft</h3>
+          <p>
+            Every environment, system, and interaction should feel deliberate and memorable.
+          </p>
+        </article>
+
+        <article class="value-card reveal" data-label="03">
+          <span class="value-icon">◇</span>
+          <h3>Collaboration</h3>
+          <p>
+            Different disciplines come together to build one shared vision.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="join" id="join">
+      <div class="join-inner">
+        <div class="join-copy reveal">
+          <p class="section-kicker">BUILD SOMETHING WITH US</p>
+
+          <h2>Your next world could begin here.</h2>
+
+          <p>
+            Aerinyu is growing. We welcome developers, builders, artists, UI designers,
+            animators, writers, producers, and creators who want to shape something original.
+          </p>
+
+          <a class="button button-dark magnetic" href="mailto:support@aerinyustudios.com">
+            Contact the studio
+            <span>↗</span>
+          </a>
+        </div>
+
+        <div class="role-list reveal">
+          <a href="mailto:mfa@aerinyustudios.com?subject=Development Application">
+            <span>01</span>
+            <strong>Development</strong>
+            <i>↗</i>
+          </a>
+
+          <a href="mailto:mfa@aerinyustudios.com?subject=Art Application">
+            <span>02</span>
+            <strong>Art & Worldbuilding</strong>
+            <i>↗</i>
+          </a>
+
+          <a href="mailto:mfa@aerinyustudios.com?subject=Design Application">
+            <span>03</span>
+            <strong>Design & Production</strong>
+            <i>↗</i>
+          </a>
+
+          <a href="mailto:mfa@aerinyustudios.com?subject=Media Application">
+            <span>04</span>
+            <strong>Community & Media</strong>
+            <i>↗</i>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <img src="assets/logo.png" alt="Aerinyu Studios" class="footer-logo-image" />
+
+      <div>
+        <strong>AERINYU STUDIOS</strong>
+        <p>Where gaming meets discovery.</p>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="#">Instagram</a>
+      <a href="#">Discord</a>
+      <a href="mailto:mfa@aerinyustudios.com">Email</a>
+    </div>
+
+    <p>© 2026 Aerinyu Studios. All rights reserved.</p>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
