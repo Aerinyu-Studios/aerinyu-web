@@ -9,7 +9,6 @@ window.addEventListener('scroll', () => {
 
 menuButton.addEventListener('click', () => {
   const open = menuButton.classList.toggle('active');
-
   mobileMenu.classList.toggle('open', open);
   menuButton.setAttribute('aria-expanded', String(open));
 });
@@ -36,9 +35,7 @@ const revealObserver = new IntersectionObserver(
       }
     });
   },
-  {
-    threshold: 0.16
-  }
+  { threshold: 0.16 }
 );
 
 document.querySelectorAll('.reveal').forEach((element) => {
@@ -76,58 +73,30 @@ function resizeCanvas() {
   canvas.style.width = `${window.innerWidth}px`;
   canvas.style.height = `${window.innerHeight}px`;
 
-  context.setTransform(
-    deviceScale,
-    0,
-    0,
-    deviceScale,
-    0,
-    0
-  );
+  context.setTransform(deviceScale, 0, 0, deviceScale, 0, 0);
 
-  const particleCount = Math.min(
-    105,
-    Math.floor(window.innerWidth / 13)
-  );
+  const particleCount = Math.min(105, Math.floor(window.innerWidth / 13));
 
-  particles = Array.from(
-    {
-      length: particleCount
-    },
-    () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      radius: Math.random() * 1.25 + 0.25,
-      speed: Math.random() * 0.18 + 0.04,
-      drift: Math.random() * 0.24 - 0.12,
-      alpha: Math.random() * 0.55 + 0.12
-    })
-  );
+  particles = Array.from({ length: particleCount }, () => ({
+    x: Math.random() * window.innerWidth,
+    y: Math.random() * window.innerHeight,
+    radius: Math.random() * 1.25 + 0.25,
+    speed: Math.random() * 0.18 + 0.04,
+    drift: Math.random() * 0.24 - 0.12,
+    alpha: Math.random() * 0.55 + 0.12
+  }));
 }
 
 function animateParticles() {
-  context.clearRect(
-    0,
-    0,
-    window.innerWidth,
-    window.innerHeight
-  );
+  context.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
   particles.forEach((particle) => {
     particle.y -= particle.speed;
     particle.x += particle.drift;
 
-    if (particle.y < -10) {
-      particle.y = window.innerHeight + 10;
-    }
-
-    if (particle.x < -10) {
-      particle.x = window.innerWidth + 10;
-    }
-
-    if (particle.x > window.innerWidth + 10) {
-      particle.x = -10;
-    }
+    if (particle.y < -10) particle.y = window.innerHeight + 10;
+    if (particle.x < -10) particle.x = window.innerWidth + 10;
+    if (particle.x > window.innerWidth + 10) particle.x = -10;
 
     const xDistance = pointer.x - particle.x;
     const yDistance = pointer.y - particle.y;
@@ -167,9 +136,7 @@ animateParticles();
 const heroSymbol = document.querySelector('.hero-symbol');
 
 window.addEventListener('pointermove', (event) => {
-  if (window.innerWidth < 900) {
-    return;
-  }
+  if (window.innerWidth < 900) return;
 
   const x = (event.clientX / window.innerWidth - 0.5) * 16;
   const y = (event.clientY / window.innerHeight - 0.5) * 16;
