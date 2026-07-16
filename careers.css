@@ -176,3 +176,52 @@
 @media(max-width:600px){
   .filter-field{max-width:none}
 }
+
+
+/* v8 careers toolbar — compact and stable at every viewport */
+.jobs-toolbar{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 280px;
+  align-items:end;
+  gap:32px;
+  min-height:0;
+  margin:0 0 48px;
+}
+.jobs-toolbar>div{min-width:0}
+.jobs-toolbar h2{margin-bottom:0}
+.filter-field{
+  width:280px;
+  max-width:100%;
+  min-width:0;
+  justify-self:end;
+  align-self:end;
+  gap:9px;
+  margin:0;
+}
+.filter-field select{
+  display:block;
+  width:100%;
+  min-width:0;
+  height:54px;
+  margin:0;
+  padding:0 44px 0 18px;
+  line-height:normal;
+}
+@media(max-width:900px){
+  .jobs-toolbar{
+    grid-template-columns:1fr;
+    align-items:start;
+    gap:26px;
+    margin-bottom:38px;
+  }
+  .filter-field{
+    width:min(100%,360px);
+    max-width:360px;
+    justify-self:start;
+  }
+}
+@media(max-width:600px){
+  .jobs-toolbar{gap:22px;margin-bottom:32px}
+  .filter-field{width:100%;max-width:none}
+  .filter-field select{height:52px}
+}

@@ -4,7 +4,6 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 const BUCKET = 'career-applications';
 const authorised = (req) => Boolean(process.env.ADMIN_KEY) && req.headers['x-admin-key'] === process.env.ADMIN_KEY;
 const text = (value, max = 1000) => String(value ?? '').trim().slice(0, max);
-const html = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[char]));
 const clientIp = (req) => text((req.headers['x-forwarded-for'] || '').split(',')[0] || req.headers['x-real-ip'] || 'unknown', 100);
 const ipHash = (req) => createHash('sha256').update(`${clientIp(req)}:${process.env.RATE_LIMIT_SALT || process.env.ADMIN_KEY || 'aerinyu'}`).digest('hex');
 
@@ -36,8 +35,6 @@ async function sendEmail(payload) {
   if (!response.ok) throw new Error(result?.message || 'Email could not be sent.');
   return result;
 }
-
-const emailShell = (content, preheader='') => `<!doctype html><html><body style="margin:0;background:#080808;font-family:Arial,sans-serif;color:#f3f1ed"><div style="display:none;max-height:0;overflow:hidden">${html(preheader)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#080808;padding:32px 14px"><tr><td align="center"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background:#111;border:1px solid #292929;border-radius:20px;overflow:hidden"><tr><td style="padding:30px 34px;border-bottom:1px solid #292929"><div style="font-size:12px;letter-spacing:3px;color:#bcb7ae;font-weight:700">AERINYU STUDIOS</div><div style="font-size:13px;color:#777;margin-top:7px">Where gaming meets discovery.</div></td></tr><tr><td style="padding:36px 34px;line-height:1.7;color:#d9d5ce">${content}</td></tr><tr><td style="padding:22px 34px;border-top:1px solid #292929;color:#777;font-size:12px">Aerinyu Studios Careers · careers@aerinyustudios.com</td></tr></table></td></tr></table></body></html>`;
 
 export default async function handler(req, res) {
   try {
@@ -97,14 +94,85 @@ export default async function handler(req, res) {
     const adminUrl = `${process.env.PUBLIC_SITE_URL || 'https://www.aerinyustudios.com'}/admin.html`;
     let notificationSent = false, confirmationSent = false; const emailErrors = [];
 
+    // Download the privately stored résumé on the server so it can be attached
+    // to the internal careers notification. The applicant never receives a
+    // public storage URL or Supabase secret.
+    let resumeAttachment = null;
     try {
-      await sendEmail({ from, to:[notificationTo], reply_to:payload.email, subject:`New application: ${job.title} — ${payload.full_name}`,
-        html: emailShell(`<div style="font-size:12px;letter-spacing:2px;color:#a8a39a;font-weight:700">NEW CAREERS APPLICATION</div><h1 style="margin:12px 0 22px;color:#fff;font-size:28px">${html(payload.full_name)}</h1><div style="background:#181818;border:1px solid #2a2a2a;border-radius:14px;padding:20px"><p><strong style="color:#fff">Position:</strong> ${html(roleLabel)}</p><p><strong style="color:#fff">Email:</strong> ${html(payload.email)}</p><p><strong style="color:#fff">Phone:</strong> ${html(phone)}</p><p><strong style="color:#fff">Country / timezone:</strong> ${html(payload.country_timezone || 'Not provided')}</p><p><strong style="color:#fff">Discord:</strong> ${html(payload.discord_username || 'Not provided')}</p><p><strong style="color:#fff">Portfolio:</strong> ${payload.portfolio_url ? `<a style="color:#fff" href="${html(payload.portfolio_url)}">Open portfolio</a>` : 'Not provided'}</p></div>${payload.message ? `<h2 style="color:#fff;font-size:18px;margin-top:28px">Applicant response</h2><p>${html(payload.message).replace(/\n/g,'<br>')}</p>` : ''}<p style="margin-top:30px"><a href="${html(adminUrl)}" style="display:inline-block;background:#f0eee9;color:#080808;text-decoration:none;padding:13px 20px;border-radius:999px;font-weight:700">Review application and résumé</a></p><p style="font-size:12px;color:#777">Application ID: ${html(inserted.id)}</p>`, `New application from ${payload.full_name}`) }); notificationSent = true;
+      const { data: resumeFile, error: resumeError } = await supabase.storage
+        .from(BUCKET)
+        .download(payload.resume_path);
+      if (resumeError) throw resumeError;
+      const resumeBuffer = Buffer.from(await resumeFile.arrayBuffer());
+      resumeAttachment = {
+        filename: (payload.resume_original_name || 'resume.pdf').replace(/[\\/:*?"<>|\r\n]/g, '_'),
+        content: resumeBuffer.toString('base64')
+      };
+    } catch (error) {
+      emailErrors.push(`Résumé attachment: ${error.message}`);
+    }
+
+    const staffText = [
+      'Hello Careers Team,',
+      '',
+      'A new application has been submitted through the Aerinyu Studios careers website.',
+      '',
+      `Position: ${roleLabel}`,
+      `Department: ${job.department || 'Not specified'}`,
+      `Applicant: ${payload.full_name}`,
+      `Email: ${payload.email}`,
+      `Phone: ${phone}`,
+      `Country / timezone: ${payload.country_timezone || 'Not provided'}`,
+      `Discord: ${payload.discord_username || 'Not provided'}`,
+      `Portfolio: ${payload.portfolio_url || 'Not provided'}`,
+      '',
+      ...(payload.message ? ['Applicant response:', payload.message, ''] : []),
+      resumeAttachment
+        ? 'The applicant’s résumé is attached to this email.'
+        : 'The résumé could not be attached. It remains available securely through the admin page.',
+      '',
+      `Review application: ${adminUrl}`,
+      `Application ID: ${inserted.id}`,
+      '',
+      'Regards,',
+      'Aerinyu Careers System'
+    ].join('\n');
+
+    const applicantText = [
+      `Dear ${payload.full_name},`,
+      '',
+      `Thank you for applying for the ${job.title} position at Aerinyu Studios.`,
+      '',
+      'This email confirms that we have received your application and résumé. Our team will review the information you submitted and will contact you if your application is shortlisted or if we require any additional information.',
+      '',
+      'Please note that this acknowledgement is not an offer of employment or confirmation of selection.',
+      '',
+      'Regards,',
+      'Aerinyu Studios Careers',
+      'careers@aerinyustudios.com'
+    ].join('\n');
+
+    try {
+      await sendEmail({
+        from,
+        to: [notificationTo],
+        reply_to: payload.email,
+        subject: `New careers application — ${job.title} — ${payload.full_name}`,
+        text: staffText,
+        ...(resumeAttachment ? { attachments: [resumeAttachment] } : {})
+      });
+      notificationSent = true;
     } catch (error) { emailErrors.push(`Staff notification: ${error.message}`); }
 
     try {
-      await sendEmail({ from, to:[payload.email], reply_to:notificationTo, subject:`Application received — ${job.title}`,
-        html: emailShell(`<div style="font-size:12px;letter-spacing:2px;color:#a8a39a;font-weight:700">APPLICATION RECEIVED</div><h1 style="margin:12px 0 22px;color:#fff;font-size:28px">Thank you, ${html(payload.full_name)}.</h1><p>We have received your application for the <strong style="color:#fff">${html(job.title)}</strong> position at Aerinyu Studios.</p><p>Your details and résumé are now securely recorded for review. Our team will contact you using the information you provided if we would like to proceed.</p><div style="margin:28px 0;padding:18px 20px;background:#181818;border:1px solid #2a2a2a;border-radius:14px"><strong style="color:#fff">Please note:</strong> this email confirms receipt only. It is not an employment offer or confirmation of selection.</div><p>Regards,<br><strong style="color:#fff">Aerinyu Studios Careers</strong></p>`, `We received your application for ${job.title}`) }); confirmationSent = true;
+      await sendEmail({
+        from,
+        to: [payload.email],
+        reply_to: notificationTo,
+        subject: `Application received — ${job.title}`,
+        text: applicantText
+      });
+      confirmationSent = true;
     } catch (error) { emailErrors.push(`Applicant confirmation: ${error.message}`); }
 
     await supabase.from('applications').update({ notification_sent:notificationSent, confirmation_sent:confirmationSent, notified_at:notificationSent?new Date().toISOString():null, confirmation_sent_at:confirmationSent?new Date().toISOString():null, notification_error:emailErrors.length?emailErrors.join(' | ').slice(0,2000):null }).eq('id', inserted.id);
