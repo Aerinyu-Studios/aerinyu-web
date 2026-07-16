@@ -117,3 +117,62 @@
   .application-form input,.application-form select,.application-form textarea{min-height:54px;padding:15px}
   .turnstile-wrap{width:100%}
 }
+
+/* v7 final alignment refinements */
+.jobs-toolbar{
+  align-items:flex-end;
+}
+.filter-field{
+  width:min(100%,300px);
+}
+.filter-field select{
+  width:100%;
+  min-width:0;
+  height:56px;
+  padding:0 48px 0 18px;
+}
+
+/* Keep native checkboxes from inheriting full text-input sizing. */
+.application-form .consent{
+  display:grid!important;
+  grid-template-columns:20px minmax(0,1fr)!important;
+  column-gap:12px!important;
+  align-items:start!important;
+  padding:2px 0;
+  cursor:pointer;
+}
+.application-form .consent input[type="checkbox"]{
+  appearance:auto;
+  -webkit-appearance:checkbox;
+  width:16px!important;
+  height:16px!important;
+  min-width:16px!important;
+  min-height:16px!important;
+  margin:4px 0 0 0!important;
+  padding:0!important;
+  border:initial!important;
+  border-radius:initial!important;
+  background:initial!important;
+  box-shadow:none!important;
+  accent-color:#f1efe9;
+}
+.application-form .consent span{
+  display:block;
+  margin:0;
+  line-height:1.55;
+}
+
+/* Simple text action; no decorative arrow or duplicate trailing label. */
+.job-open{
+  display:block;
+}
+.job-open::after{
+  content:none!important;
+}
+
+@media(max-width:900px){
+  .filter-field{width:100%;max-width:420px}
+}
+@media(max-width:600px){
+  .filter-field{max-width:none}
+}
