@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Join Aerinyu Studios and help build imaginative Roblox experiences." />
+  <title>Careers — Aerinyu Studios</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Montserrat:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="careers.css" />
+</head>
+<body class="careers-page">
+  <div class="grain" aria-hidden="true"></div>
+  <header class="site-header scrolled careers-header">
+    <a class="brand" href="index.html" aria-label="Aerinyu Studios home">
+      <img src="assets/logo.png" alt="Aerinyu Studios" class="brand-logo-image" />
+    </a>
+    <nav class="desktop-nav" aria-label="Main navigation">
+      <a href="index.html#about">About</a>
+      <a href="index.html#world">Our World</a>
+      <a href="index.html#values">Vision</a>
+      <a href="careers.html" aria-current="page">Careers</a>
+    </nav>
+    <a href="mailto:careers@aerinyustudios.com" class="header-cta">Recruitment enquiries</a>
+    <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false"><span></span><span></span></button>
+  </header>
+  <div class="mobile-menu">
+    <a href="index.html">Home</a><a href="index.html#about">About</a><a href="index.html#world">Our World</a><a href="careers.html">Careers</a>
+  </div>
+
+  <main>
+    <section class="careers-hero">
+      <div class="careers-hero-copy reveal visible">
+        <p class="section-kicker">CAREERS AT AERINYU</p>
+        <h1>Build worlds worth discovering.</h1>
+        <p>Join a growing independent team creating original Roblox experiences through thoughtful design, polished systems, and memorable worldbuilding.</p>
+      </div>
+    </section>
+
+    <section class="jobs-shell">
+      <div class="jobs-toolbar">
+        <div>
+          <p class="section-kicker">OPEN OPPORTUNITIES</p>
+          <h2>Find your place.</h2>
+        </div>
+        <label class="filter-field">
+          <span>Department</span>
+          <select id="department-filter"><option value="">All departments</option></select>
+        </label>
+      </div>
+
+      <div id="jobs-status" class="jobs-status">Loading open roles…</div>
+      <div id="jobs-grid" class="jobs-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <dialog id="job-dialog" class="job-dialog">
+    <button class="dialog-close" type="button" aria-label="Close">×</button>
+    <div id="job-detail"></div>
+  </dialog>
+
+  <footer class="site-footer careers-footer">
+    <div class="footer-brand"><img src="assets/logo.png" alt="Aerinyu Studios" class="footer-logo-image" /><div><strong>AERINYU STUDIOS</strong><p>Where gaming meets discovery.</p></div></div>
+    <div class="footer-links"><a href="index.html">Home</a><a href="mailto:careers@aerinyustudios.com">Email</a></div>
+    <p>© 2026 Aerinyu Studios.</p>
+  </footer>
+
+  <script src="careers.js"></script>
+</body>
+</html>
