@@ -28,6 +28,7 @@ async function unlock() {
     sessionStorage.setItem('aerinyu_admin_key', adminKey);
     authCard.hidden = true;
     panel.hidden = false;
+    await loadApplications();
   } catch (error) {
     sessionStorage.removeItem('aerinyu_admin_key');
     alert('The admin key was not accepted.');
@@ -152,3 +153,54 @@ form.addEventListener('submit', async (event) => {
 document.querySelector('#reset-form').addEventListener('click', resetForm);
 document.querySelector('#refresh-jobs').addEventListener('click', loadJobs);
 if (adminKey) unlock();
+
+const applicationsList = document.querySelector('#admin-applications');
+const refreshApplicationsButton = document.querySelector('#refresh-applications');
+
+function populateCurrencies() {
+  const select = document.querySelector('#compensation_currency');
+  if (!select) return;
+  let codes;
+  try { codes = Intl.supportedValuesOf('currency'); }
+  catch { codes = ['AED','AUD','BRL','CAD','CHF','CNY','EUR','GBP','HKD','IDR','INR','JPY','KRW','MYR','NZD','PHP','SAR','SGD','THB','TWD','USD','VND']; }
+  const names = typeof Intl.DisplayNames === 'function' ? new Intl.DisplayNames(['en'], { type: 'currency' }) : null;
+  select.innerHTML = codes.map((code) => `<option value="${code}" ${code === 'MYR' ? 'selected' : ''}>${code}${names ? ` — ${escapeHtml(names.of(code) || '')}` : ''}</option>`).join('');
+}
+
+async function applicationsApi(path = '') {
+  const response = await fetch(`/api/applications${path}`, { headers: { 'x-admin-key': adminKey } });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(body.error || 'Request failed');
+  return body;
+}
+
+async function loadApplications() {
+  if (!applicationsList) return;
+  try {
+    const applications = await applicationsApi();
+    applicationsList.innerHTML = applications.length ? applications.map((app) => {
+      const role = app.jobs?.title || 'Unknown role';
+      const unit = app.jobs?.unit_name || app.jobs?.department || '';
+      const submitted = new Date(app.created_at).toLocaleString();
+      return `<article class="application-card">
+        <div class="application-card-main"><span>${escapeHtml(role)}${unit ? ` · ${escapeHtml(unit)}` : ''}</span><h3>${escapeHtml(app.full_name)}</h3><p>${escapeHtml(app.email)} · ${escapeHtml(app.phone_country_code || '')} ${escapeHtml(app.phone_number || '')}</p><small>Submitted ${escapeHtml(submitted)}</small></div>
+        <div class="application-card-actions"><button type="button" data-resume="${app.id}">View résumé</button>${app.portfolio_url ? `<a href="${escapeHtml(app.portfolio_url)}" target="_blank" rel="noopener noreferrer">Portfolio</a>` : ''}<a href="mailto:${encodeURIComponent(app.email)}">Email</a></div>
+      </article>`;
+    }).join('') : '<p class="empty-state">No applications yet.</p>';
+    applicationsList.querySelectorAll('[data-resume]').forEach((button) => button.addEventListener('click', async () => {
+      button.disabled = true;
+      const old = button.textContent;
+      button.textContent = 'Opening…';
+      try {
+        const result = await applicationsApi(`?action=resume&id=${encodeURIComponent(button.dataset.resume)}`);
+        window.open(result.url, '_blank', 'noopener,noreferrer');
+      } catch (error) { alert(error.message); }
+      finally { button.disabled = false; button.textContent = old; }
+    }));
+  } catch (error) {
+    applicationsList.innerHTML = `<p class="empty-state">${escapeHtml(error.message)}</p>`;
+  }
+}
+
+populateCurrencies();
+refreshApplicationsButton?.addEventListener('click', loadApplications);
