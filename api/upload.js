@@ -18,13 +18,29 @@ const ipHash = (req) => createHash('sha256').update(`${clientIp(req)}:${process.
 
 async function verifyTurnstile(token, req) {
   const secret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret) return true;
-  if (!token) return false;
-  const body = new URLSearchParams({ secret, response: token, remoteip: clientIp(req) });
-  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body });
+  if (!secret) return { success: true, disabled: true };
+  if (!token) return { success: false, errorCodes: ['missing-input-response'] };
+
+  const body = new URLSearchParams({
+    secret: secret.trim(),
+    response: token,
+    remoteip: clientIp(req)
+  });
+
+  const response = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+
   const result = await response.json().catch(() => ({}));
-  return result.success === true;
+  return {
+    success: result.success === true,
+    errorCodes: Array.isArray(result['error-codes']) ? result['error-codes'] : [],
+    hostname: result.hostname || null
+  };
 }
+
 
 function signUploadToken(path, hash) {
   const secret = process.env.UPLOAD_TOKEN_SECRET || process.env.ADMIN_KEY;
@@ -52,8 +68,14 @@ export default async function handler(req, res) {
     if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > MAX_FILE_SIZE) {
       return res.status(400).json({ error: 'Résumé must be 5 MB or smaller.' });
     }
-    if (!(await verifyTurnstile(turnstileToken, req))) {
-      return res.status(400).json({ error: 'Security verification failed. Please try again.' });
+    const verification = await verifyTurnstile(turnstileToken, req);
+    if (!verification.success) {
+      const codes = verification.errorCodes.length ? verification.errorCodes.join(', ') : 'unknown-error';
+      console.warn('Turnstile verification failed:', { codes, hostname: verification.hostname });
+      return res.status(400).json({
+        error: `Security verification failed (${codes}). Please complete the check again.`,
+        turnstile_error_codes: verification.errorCodes
+      });
     }
 
     const supabase = serverClient();

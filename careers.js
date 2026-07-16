@@ -28,9 +28,39 @@ async function submitApplication(e){
     const r=await fetch('/api/applications',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
     const data=await r.json();if(!r.ok)throw new Error(data.error||'Submission failed');
     form.reset();if(window.turnstile&&turnstileSiteKey)window.turnstile.reset();msg.textContent=data.confirmation_email_sent?'Application submitted. A confirmation email has been sent to you.':'Application submitted successfully. Thank you.';
-  }catch(err){msg.textContent=err.message;}finally{button.disabled=false;}
+  }catch(err){
+    msg.textContent=err.message;
+    if(window.turnstile&&turnstileSiteKey){
+      try{window.turnstile.reset();}catch{}
+    }
+  }finally{button.disabled=false;}
+
 }
 async function loadSecurity(){try{const r=await fetch('/api/config');const c=await r.json();turnstileSiteKey=c.turnstile_site_key||'';if(turnstileSiteKey&&!document.querySelector('script[src*=turnstile]')){const script=document.createElement('script');script.src='https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';script.async=true;script.defer=true;document.head.appendChild(script);}}catch{turnstileSiteKey='';}}
-function renderTurnstile(){const wrap=document.querySelector('#turnstile-wrap'),widget=document.querySelector('#turnstile-widget');if(!wrap||!widget||!turnstileSiteKey)return;wrap.hidden=false;const wait=()=>{if(window.turnstile){widget.innerHTML='';window.turnstile.render(widget,{sitekey:turnstileSiteKey,theme:'dark'});}else setTimeout(wait,100)};wait();}
+function renderTurnstile(){
+  const wrap=document.querySelector('#turnstile-wrap'),widget=document.querySelector('#turnstile-widget');
+  if(!wrap||!widget||!turnstileSiteKey)return;
+  wrap.hidden=false;
+  const wait=()=>{
+    if(window.turnstile){
+      widget.innerHTML='';
+      window.turnstile.render(widget,{
+        sitekey:turnstileSiteKey,
+        theme:'dark',
+        size:'flexible',
+        appearance:'always',
+        retry:'auto',
+        'expired-callback':()=>window.turnstile.reset(),
+        'timeout-callback':()=>window.turnstile.reset(),
+        'error-callback':()=>{
+          const message=document.querySelector('#application-message');
+          if(message)message.textContent='The security check could not load. Please refresh it and try again.';
+          return true;
+        }
+      });
+    }else setTimeout(wait,100);
+  };
+  wait();
+}
 async function loadJobs(){try{const r=await fetch('/api/jobs');if(!r.ok)throw 0;jobs=await r.json();const ds=[...new Set(jobs.map(j=>j.department))].sort();filter.innerHTML='<option value="">All departments</option>'+ds.map(d=>`<option>${esc(d)}</option>`).join('');renderJobs();}catch{statusBox.hidden=false;statusBox.textContent='Open roles could not be loaded. Please email careers@aerinyustudios.com.';}}
 loadSecurity();filter.onchange=renderJobs;dialog.querySelector('.dialog-close').onclick=()=>dialog.close();dialog.onclick=e=>{if(e.target===dialog)dialog.close()};const mb=document.querySelector('.menu-toggle'),mm=document.querySelector('.mobile-menu');mb.onclick=()=>{const o=mb.classList.toggle('active');mm.classList.toggle('open',o);mb.setAttribute('aria-expanded',String(o))};loadJobs();
