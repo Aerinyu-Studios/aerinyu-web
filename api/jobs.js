@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
-const allowedFields = ['title','department','unit_name','work_type','engagement_type','location','summary','about_role','responsibilities','requirements','preferred_skills','benefits','schedule_type','hours_description','estimated_hours_per_week','meeting_requirements','compensation_type','compensation','compensation_min','compensation_max','compensation_currency','application_url','is_open','featured','display_order'];
+const allowedFields = ['title','department','unit_name','work_type','engagement_type','location','summary','about_role','responsibilities','requirements','preferred_skills','benefits','schedule_type','hours_description','estimated_hours_per_week','meeting_requirements','compensation_type','compensation','compensation_min','compensation_max','compensation_currency','application_url','show_application_message','is_open','featured','display_order'];
 const cleanPayload = (body = {}) => Object.fromEntries(allowedFields.filter((key) => key in body).map((key) => [key, body[key]]));
 const authorised = (req) => Boolean(process.env.ADMIN_KEY) && req.headers['x-admin-key'] === process.env.ADMIN_KEY;
 

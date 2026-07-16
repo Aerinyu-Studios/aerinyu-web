@@ -55,6 +55,7 @@ function resetForm() {
   document.querySelector('#hours_description').value = 'Work at your own hours. Team members manage their own schedules as long as agreed deadlines, meetings, communication expectations, and deliverables are completed.';
   document.querySelector('#meeting_requirements').value = 'Occasional scheduled meetings may be required with reasonable prior notice.';
   document.querySelector('#compensation_type').value = 'Task-cycle / commission-based';
+  document.querySelector('#show_application_message').checked = true;
   document.querySelector('#is_open').checked = true;
   message.textContent = '';
 }
@@ -82,6 +83,7 @@ function editJob(id) {
   document.querySelector('#estimated_hours_per_week').value = job.estimated_hours_per_week ?? '';
   document.querySelector('#compensation_min').value = job.compensation_min ?? '';
   document.querySelector('#compensation_max').value = job.compensation_max ?? '';
+  document.querySelector('#show_application_message').checked = job.show_application_message !== false;
   document.querySelector('#is_open').checked = Boolean(job.is_open);
   scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -133,6 +135,7 @@ form.addEventListener('submit', async (event) => {
     compensation_max: value('compensation_max') === '' ? null : Number(value('compensation_max')),
     compensation_currency: value('compensation_currency'),
     application_url: '',
+    show_application_message: document.querySelector('#show_application_message').checked,
     is_open: document.querySelector('#is_open').checked
   };
 
