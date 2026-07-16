@@ -38,7 +38,7 @@ async function loadJobs() {
   jobs = await api('?admin=1');
   list.innerHTML = jobs.length ? jobs.map((job) => `
     <article class="admin-job ${job.is_open ? '' : 'closed'}">
-      <div><span>${escapeHtml(job.department)} · ${escapeHtml(job.engagement_type)}</span><h3>${escapeHtml(job.title)}</h3><p>${job.is_open ? 'Open' : 'Closed'}</p></div>
+      <div><span>${escapeHtml(job.unit_name || job.department)} · ${escapeHtml(job.engagement_type)}</span><h3>${escapeHtml(job.title)}</h3><p>${job.is_open ? 'Open' : 'Closed'}</p></div>
       <div class="admin-job-actions"><button type="button" data-edit="${job.id}">Edit</button><button type="button" data-toggle="${job.id}">${job.is_open ? 'Close' : 'Reopen'}</button><button type="button" data-delete="${job.id}">Delete</button></div>
     </article>`).join('') : '<p class="empty-state">No postings yet.</p>';
 
@@ -64,9 +64,9 @@ function editJob(id) {
   if (!job) return;
 
   const simpleFields = [
-    'title','department','work_type','engagement_type','location','summary','about_role',
+    'title','department','unit_name','work_type','engagement_type','location','summary','about_role',
     'schedule_type','hours_description','meeting_requirements','compensation_type',
-    'compensation','application_url'
+    'compensation','compensation_currency','application_url'
   ];
 
   document.querySelector('#job-id').value = job.id;
@@ -80,6 +80,8 @@ function editJob(id) {
   });
 
   document.querySelector('#estimated_hours_per_week').value = job.estimated_hours_per_week ?? '';
+  document.querySelector('#compensation_min').value = job.compensation_min ?? '';
+  document.querySelector('#compensation_max').value = job.compensation_max ?? '';
   document.querySelector('#is_open').checked = Boolean(job.is_open);
   scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -111,6 +113,7 @@ form.addEventListener('submit', async (event) => {
   const payload = {
     title: value('title'),
     department: value('department'),
+    unit_name: value('unit_name') || null,
     work_type: value('work_type'),
     engagement_type: value('engagement_type'),
     location: value('location'),
@@ -126,7 +129,10 @@ form.addEventListener('submit', async (event) => {
     meeting_requirements: value('meeting_requirements'),
     compensation_type: value('compensation_type'),
     compensation: value('compensation'),
-    application_url: value('application_url'),
+    compensation_min: value('compensation_min') === '' ? null : Number(value('compensation_min')),
+    compensation_max: value('compensation_max') === '' ? null : Number(value('compensation_max')),
+    compensation_currency: value('compensation_currency'),
+    application_url: '',
     is_open: document.querySelector('#is_open').checked
   };
 
