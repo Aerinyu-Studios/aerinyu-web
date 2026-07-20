@@ -17,6 +17,11 @@
       "source": "/admin.html",
       "destination": "/admin",
       "permanent": true
+    },
+    {
+      "source": "/qa-testers.html",
+      "destination": "/qa-testers",
+      "permanent": true
     }
   ]
 }
