@@ -8,11 +8,11 @@
     {"source": "/admin.html", "destination": "/admin", "permanent": true},
     {"source": "/qa-testers.html", "destination": "/qa-testers", "permanent": true},
     {"source": "/friendship-run.html", "destination": "/friendship-run", "permanent": true},
-    {"source": "/friendship-run-leaderboard.html", "destination": "/friendship-run/leaderboard", "permanent": true}
+    {"source": "/friendship-run-leaderboard.html", "destination": "/friendship-run/leaderboard", "permanent": true},
+    {"source": "/friendship-run-admin.html", "destination": "/friendship-run/admin", "permanent": true}
   ],
   "rewrites": [
-    {"source": "/friendship-run/leaderboard", "destination": "/friendship-run-leaderboard.html"}
+    {"source": "/friendship-run/leaderboard", "destination": "/friendship-run/leaderboard.html"},
+    {"source": "/friendship-run/admin", "destination": "/friendship-run/admin.html"}
   ]
 }
-
-

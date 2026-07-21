@@ -227,22 +227,22 @@ function placeFood() {
 }
 
 function draw() {
-  ctx.fillStyle = Date.now() < boardFlashUntil ? '#d7e5aa' : '#c9d69b';
+  ctx.fillStyle = Date.now() < boardFlashUntil ? '#e9f4ff' : '#dcecff';
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = 'rgba(30,44,34,.11)';
+  ctx.strokeStyle = 'rgba(23,33,107,.12)';
   ctx.lineWidth = 1;
   for(let i=0;i<=cells;i++){
     ctx.beginPath();ctx.moveTo(i*grid,0);ctx.lineTo(i*grid,canvas.height);ctx.stroke();
     ctx.beginPath();ctx.moveTo(0,i*grid);ctx.lineTo(canvas.width,i*grid);ctx.stroke();
   }
-  ctx.fillStyle = '#202a22';
+  ctx.fillStyle = '#d84f73';
   ctx.beginPath();
   ctx.arc(food.x*grid+grid/2, food.y*grid+grid/2, grid*.27, 0, Math.PI*2);
   ctx.fill();
   snake.forEach((part,index)=>{
-    ctx.fillStyle = index === 0 ? '#131b15' : '#344137';
+    ctx.fillStyle = index === 0 ? '#17216b' : (index % 2 ? '#315ae8' : '#5b25d6');
     ctx.fillRect(part.x*grid+2,part.y*grid+2,grid-4,grid-4);
-    if(index === 0){ctx.fillStyle='#c9d69b';ctx.fillRect(part.x*grid+grid*.64,part.y*grid+grid*.22,5,5)}
+    if(index === 0){ctx.fillStyle='#ffffff';ctx.fillRect(part.x*grid+grid*.62,part.y*grid+grid*.22,6,6)}
   });
 }
 
@@ -298,7 +298,7 @@ async function endGame(){
     const data=await request('score',{method:'POST',body:JSON.stringify({attempt_token:attemptToken,score,duration_ms:Date.now()-startedAt})});
     $('#finalScore').textContent=score;
     $('#resultHeadline').textContent=data.rank?`You placed #${data.rank}`:'Score submitted';
-    $('#resultMessage').textContent='This result replaced the previous score for the same student ID.';
+    $('#resultMessage').textContent='Your score has been added to the live Friendship Run leaderboard.';
   }catch(error){
     $('#finalScore').textContent=score;$('#resultHeadline').textContent='Score not submitted';$('#resultMessage').textContent=error.message;
   }

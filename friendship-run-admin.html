@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>Friendship Run Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/friendship-run.css?v=20" />
+</head>
+<body class="fr-admin-page">
+  <main class="fr-admin-shell">
+    <header class="fr-admin-header">
+      <div><p class="section-label">PRIVATE EVENT CONTROL</p><h1>Friendship Run Admin</h1></div>
+      <a href="/friendship-run/leaderboard" target="_blank" class="button secondary">Open TV display</a>
+    </header>
+
+    <section class="panel fr-admin-auth" id="adminAuth">
+      <h2>Unlock controls</h2>
+      <form id="adminAuthForm" class="form-stack">
+        <label><span>Admin key</span><input id="adminKey" type="password" required /></label>
+        <button class="button primary" type="submit">Continue</button>
+        <p class="message" id="adminAuthMessage"></p>
+      </form>
+    </section>
+
+    <section id="adminPanel" hidden>
+      <div class="fr-admin-toolbar panel">
+        <div><span class="section-label">ENTRIES</span><h2>Player attempts</h2></div>
+        <div class="fr-admin-tools">
+          <input id="adminSearch" placeholder="Search name or student ID" />
+          <button id="adminRefresh" class="button secondary" type="button">Refresh</button>
+        </div>
+      </div>
+      <div id="adminEntries" class="fr-admin-list"></div>
+    </section>
+  </main>
+  <script src="/friendship-run-admin.js?v=20"></script>
+</body>
+</html>
