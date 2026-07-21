@@ -364,3 +364,41 @@ body{
   .canvas-wrap,.screen-bar{width:min(78vw,680px);max-width:100%}
   .controls-panel{max-width:680px;width:100%;justify-self:center}
 }
+
+
+/* v42 layout and podium corrections */
+.registration-screen{overflow-y:auto}
+.registration-shell{height:auto;min-height:100dvh}
+.registration-grid{height:auto;align-items:start;padding-bottom:34px}
+.registration-column{grid-template-rows:auto auto;align-content:start}
+.entry-panel{min-height:0;height:auto;overflow:visible;align-items:start}
+.entry-form{align-content:start;min-width:0}
+.leaderboard-panel{height:min(720px,calc(100dvh - 150px));min-height:560px;position:sticky;top:18px}
+.leaderboard-list{max-height:none}
+
+/* Compact podium: second, first, third; first is tallest */
+.podium{align-items:end;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:16px 0}
+.podium-item{position:relative;display:grid;justify-items:center;align-content:center;padding:10px 6px;min-height:108px;border-radius:7px}
+.podium-item.first{min-height:138px;border-top:4px solid #e8b322;background:#fff9df}
+.podium-item.second{min-height:118px;border-top:4px solid #aeb8c7;background:#f5f7fb}
+.podium-item.third{min-height:108px;border-top:4px solid #bd7b4f;background:#fff3eb}
+.podium-item>b{position:absolute;top:7px;left:8px;color:#8d99af;font-size:12px}
+.podium-item .avatar{width:38px;height:38px;margin:5px auto 6px}
+.podium-item.first .avatar{width:46px;height:46px}
+.podium-item strong{width:100%;font-size:11px}
+.podium-item span{font-size:20px;margin-top:2px}
+
+/* Booth code must remain inside its card on every display size */
+.booth-workspace>*{min-width:0}
+.code-card{min-width:0;overflow:hidden}
+#codeResult{width:100%;min-width:0}
+#generatedCode{display:block;width:100%;max-width:100%;font-size:clamp(42px,6.2vw,82px);letter-spacing:.045em;white-space:nowrap;overflow:hidden;text-overflow:clip}
+
+@media(max-width:980px){
+  .leaderboard-panel{position:static;height:620px;max-height:none}
+  .registration-column{grid-template-rows:auto auto}
+}
+@media(max-width:620px){
+  #generatedCode{font-size:clamp(38px,15vw,64px);letter-spacing:.025em}
+  .podium-item{padding-inline:4px}
+}

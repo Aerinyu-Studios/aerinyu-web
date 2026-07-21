@@ -172,6 +172,11 @@ $('#removePhotoButton').addEventListener('click', () => {
   $('#openCameraButton').textContent = 'Take player photo';
 });
 
+const playCodeInput = $('#playCode');
+playCodeInput?.addEventListener('input', () => {
+  playCodeInput.value = playCodeInput.value.replace(/\D/g, '').slice(0, 6);
+});
+
 $('#registrationForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -183,10 +188,10 @@ $('#registrationForm').addEventListener('submit', async (event) => {
     const data = await request('register', {
       method:'POST',
       body:JSON.stringify({
-        name:$('#playerName').value.trim(),
-        student_id:$('#studentId').value.trim(),
-        play_code:$('#playCode').value.trim(),
-        consent:$('#scoreConsent').checked,
+        name:($('#playerName')?.value || '').trim(),
+        student_id:($('#studentId')?.value || '').trim(),
+        play_code:($('#playCode')?.value || '').replace(/\D/g, '').slice(0, 6),
+        consent:Boolean($('#scoreConsent')?.checked),
         photo_data:capturedPhotoData
       })
     });
@@ -336,7 +341,9 @@ async function loadLeaderboard(){
   try{
     const data=await request('leaderboard');
     const entries=rankedEntries(data.entries||[]);
-    $('#podium').innerHTML=entries.slice(0,3).map(entry=>`<article class="podium-item">${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
+    const top = entries.slice(0, 3);
+    const podiumOrder = [top[1] && {entry: top[1], rank: 2, cls: 'second'}, top[0] && {entry: top[0], rank: 1, cls: 'first'}, top[2] && {entry: top[2], rank: 3, cls: 'third'}].filter(Boolean);
+    $('#podium').innerHTML = podiumOrder.map(({entry, rank, cls}) => `<article class="podium-item ${cls}"><b>${rank}</b>${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
     $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row" style="animation-delay:${Math.min(index,12)*25}ms"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
     $('#bestValue').textContent=String(entries[0]?.score||0).padStart(3,'0');
   }catch(error){$('#leaderboard').innerHTML=`<p class="empty-copy">${escapeHtml(error.message)}</p>`}
