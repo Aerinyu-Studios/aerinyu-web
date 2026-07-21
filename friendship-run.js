@@ -35,7 +35,16 @@ async function request(path, options = {}) {
     }
   });
   const body = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(body.error || 'Request failed.');
+  if (!response.ok) {
+    if (response.status === 401) {
+      sessionStorage.removeItem('friendship_run_access');
+      accessToken = '';
+      app.hidden = true;
+      gateScreen.hidden = false;
+      accessMessage.textContent = 'Your session changed after the latest deployment. Enter the event password again.';
+    }
+    throw new Error(body.error || 'Request failed.');
+  }
   return body;
 }
 
