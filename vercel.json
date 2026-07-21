@@ -3,25 +3,14 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    {
-      "source": "/index.html",
-      "destination": "/",
-      "permanent": true
-    },
-    {
-      "source": "/careers.html",
-      "destination": "/careers",
-      "permanent": true
-    },
-    {
-      "source": "/admin.html",
-      "destination": "/admin",
-      "permanent": true
-    },
-    {
-      "source": "/qa-testers.html",
-      "destination": "/qa-testers",
-      "permanent": true
-    }
+    {"source": "/index.html", "destination": "/", "permanent": true},
+    {"source": "/careers.html", "destination": "/careers", "permanent": true},
+    {"source": "/admin.html", "destination": "/admin", "permanent": true},
+    {"source": "/qa-testers.html", "destination": "/qa-testers", "permanent": true},
+    {"source": "/friendship-run.html", "destination": "/friendship-run", "permanent": true},
+    {"source": "/friendship-run-leaderboard.html", "destination": "/friendship-run/leaderboard", "permanent": true}
+  ],
+  "rewrites": [
+    {"source": "/friendship-run/leaderboard", "destination": "/friendship-run-leaderboard.html"}
   ]
 }

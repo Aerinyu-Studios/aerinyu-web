@@ -1,16 +1,13 @@
 const $ = (selector) => document.querySelector(selector);
-const screens = {
-  gate: $('#gateScreen'),
-  registration: $('#registrationScreen'),
-  game: $('#gameScreen'),
-  result: $('#resultScreen')
-};
+const screens = { gate: $('#gateScreen'), registration: $('#registrationScreen'), game: $('#gameScreen'), result: $('#resultScreen') };
 const canvas = $('#gameCanvas');
 const ctx = canvas.getContext('2d');
 
 let accessToken = sessionStorage.getItem('friendship_run_access') || '';
 let attemptToken = '';
 let player = null;
+let capturedPhotoData = null;
+let cameraStream = null;
 let snake = [];
 let food = {x: 0, y: 0};
 let direction = {x: 1, y: 0};
@@ -84,27 +81,81 @@ async function validateExistingToken() {
   }
 }
 
-function fileToDataUrl(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error('Could not read the selected image.'));
-    reader.readAsDataURL(file);
-  });
+async function openCamera() {
+  const message = $('#cameraMessage');
+  message.textContent = 'Opening camera...';
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {facingMode:'user', width:{ideal:1280}, height:{ideal:960}},
+      audio: false
+    });
+    $('#cameraVideo').srcObject = cameraStream;
+    $('#cameraDialog').showModal();
+    message.textContent = '';
+  } catch {
+    message.textContent = 'Camera access was blocked or is unavailable.';
+    if (!$('#cameraDialog').open) $('#cameraDialog').showModal();
+  }
 }
+
+function stopCamera() {
+  cameraStream?.getTracks().forEach(track => track.stop());
+  cameraStream = null;
+  $('#cameraVideo').srcObject = null;
+}
+
+function closeCamera() {
+  stopCamera();
+  $('#cameraDialog').close();
+}
+
+$('#openCameraButton').addEventListener('click', openCamera);
+$('#closeCameraButton').addEventListener('click', closeCamera);
+$('#cameraDialog').addEventListener('cancel', (event) => { event.preventDefault(); closeCamera(); });
+$('#cameraDialog').addEventListener('click', (event) => {
+  if (event.target === $('#cameraDialog')) closeCamera();
+});
+
+$('#capturePhotoButton').addEventListener('click', () => {
+  const video = $('#cameraVideo');
+  if (!video.videoWidth || !video.videoHeight) {
+    $('#cameraMessage').textContent = 'Wait for the camera preview to load.';
+    return;
+  }
+  const photoCanvas = $('#photoCanvas');
+  const pctx = photoCanvas.getContext('2d');
+  const sourceSize = Math.min(video.videoWidth, video.videoHeight);
+  const sx = (video.videoWidth - sourceSize) / 2;
+  const sy = (video.videoHeight - sourceSize) / 2;
+  pctx.save();
+  pctx.translate(photoCanvas.width, 0);
+  pctx.scale(-1, 1);
+  pctx.drawImage(video, sx, sy, sourceSize, sourceSize, 0, 0, photoCanvas.width, photoCanvas.height);
+  pctx.restore();
+  capturedPhotoData = photoCanvas.toDataURL('image/jpeg', .8);
+  $('#capturedPhoto').src = capturedPhotoData;
+  $('#capturedPhoto').hidden = false;
+  $('#cameraPlaceholder').hidden = true;
+  $('#removePhotoButton').hidden = false;
+  closeCamera();
+});
+
+$('#removePhotoButton').addEventListener('click', () => {
+  capturedPhotoData = null;
+  $('#capturedPhoto').src = '';
+  $('#capturedPhoto').hidden = true;
+  $('#cameraPlaceholder').hidden = false;
+  $('#removePhotoButton').hidden = true;
+});
 
 $('#registrationForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
   const message = $('#registrationMessage');
-  const button = form.querySelector('button');
+  const button = form.querySelector('button[type="submit"]');
   message.textContent = 'Confirming payment...';
   button.disabled = true;
   try {
-    const file = $('#playerPhoto').files[0];
-    if (file && (!['image/jpeg','image/png','image/webp'].includes(file.type) || file.size > 400 * 1024)) {
-      throw new Error('Profile picture must be JPG, PNG, or WEBP and 400 KB or smaller.');
-    }
     const data = await request('register', {
       method:'POST',
       body:JSON.stringify({
@@ -112,7 +163,7 @@ $('#registrationForm').addEventListener('submit', async (event) => {
         student_id:$('#studentId').value.trim(),
         staff_pin:$('#staffPin').value,
         consent:$('#scoreConsent').checked,
-        photo_data:file ? await fileToDataUrl(file) : null
+        photo_data:capturedPhotoData
       })
     });
     player = data.player;
@@ -147,25 +198,24 @@ function resetGame() {
 }
 
 function placeFood() {
-  do {
-    food = {x:Math.floor(Math.random()*cells), y:Math.floor(Math.random()*cells)};
-  } while (snake.some(part => part.x === food.x && part.y === food.y));
+  do food = {x:Math.floor(Math.random()*cells), y:Math.floor(Math.random()*cells)};
+  while (snake.some(part => part.x === food.x && part.y === food.y));
 }
 
 function draw() {
   ctx.fillStyle = '#c9d69b';
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = 'rgba(42,54,43,.07)';
+  ctx.strokeStyle = 'rgba(42,54,43,.06)';
   for(let i=0;i<=cells;i++){
     ctx.beginPath();ctx.moveTo(i*grid,0);ctx.lineTo(i*grid,canvas.height);ctx.stroke();
     ctx.beginPath();ctx.moveTo(0,i*grid);ctx.lineTo(canvas.width,i*grid);ctx.stroke();
   }
   ctx.fillStyle = '#202a22';
-  ctx.fillRect(food.x*grid+5,food.y*grid+5,grid-10,grid-10);
+  ctx.fillRect(food.x*grid+7,food.y*grid+7,grid-14,grid-14);
   snake.forEach((part,index)=>{
     ctx.fillStyle = index === 0 ? '#131b15' : '#344137';
-    ctx.fillRect(part.x*grid+2,part.y*grid+2,grid-4,grid-4);
-    if(index === 0){ctx.fillStyle='#c9d69b';ctx.fillRect(part.x*grid+grid*.64,part.y*grid+grid*.22,4,4)}
+    ctx.fillRect(part.x*grid+3,part.y*grid+3,grid-6,grid-6);
+    if(index === 0){ctx.fillStyle='#c9d69b';ctx.fillRect(part.x*grid+grid*.64,part.y*grid+grid*.22,5,5)}
   });
 }
 
@@ -214,7 +264,7 @@ async function endGame(){
     const data=await request('score',{method:'POST',body:JSON.stringify({attempt_token:attemptToken,score,duration_ms:Date.now()-startedAt})});
     $('#finalScore').textContent=score;
     $('#resultHeadline').textContent=data.rank?`You placed #${data.rank}`:'Score submitted';
-    $('#resultMessage').textContent='Your latest score replaced any previous score for this student ID.';
+    $('#resultMessage').textContent='This result replaced the previous score for the same student ID.';
   }catch(error){
     $('#finalScore').textContent=score;$('#resultHeadline').textContent='Score not submitted';$('#resultMessage').textContent=error.message;
   }
@@ -236,16 +286,22 @@ async function loadLeaderboard(){
     const data=await request('leaderboard');
     const entries=data.entries||[];
     $('#podium').innerHTML=entries.slice(0,3).map(entry=>`<article class="podium-item">${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
-    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="muted">No scores yet.</p>';
+    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
     $('#bestValue').textContent=String(entries[0]?.score||0).padStart(3,'0');
-  }catch(error){$('#leaderboard').innerHTML=`<p class="muted">${escapeHtml(error.message)}</p>`}
+  }catch(error){$('#leaderboard').innerHTML=`<p class="empty-copy">${escapeHtml(error.message)}</p>`}
 }
 $('#refreshLeaderboard').addEventListener('click',loadLeaderboard);
 $('#newPlayerButton').addEventListener('click',async()=>{
   $('#registrationForm').reset();
   $('#registrationMessage').textContent='';
   player=null;attemptToken='';
+  capturedPhotoData=null;
+  $('#capturedPhoto').src='';
+  $('#capturedPhoto').hidden=true;
+  $('#cameraPlaceholder').hidden=false;
+  $('#removePhotoButton').hidden=true;
   showScreen('registration');
   await loadLeaderboard();
 });
+window.addEventListener('beforeunload',stopCamera);
 validateExistingToken();
