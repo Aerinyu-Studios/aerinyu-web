@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <meta name="theme-color" content="#a9cbff" />
+  <title>Friendship Run Snake Challenge</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/friendship-run.css" />
+</head>
+<body>
+  <div class="page-noise" aria-hidden="true"></div>
+  <div class="track track-top" aria-hidden="true"></div>
+  <div class="track track-bottom" aria-hidden="true"></div>
+
+  <section class="gate-screen" id="gateScreen">
+    <div class="gate-card">
+      <p class="mini-kicker">SUNWAY PRE-U FRIENDSHIP RUN</p>
+      <h1>Snake<br><span>Challenge</span></h1>
+      <p class="gate-copy">This game page is private. Enter the event password to continue.</p>
+      <form id="accessForm" class="stack-form">
+        <label>
+          <span>Access password</span>
+          <input id="accessPassword" type="password" autocomplete="current-password" required />
+        </label>
+        <button class="primary-button" type="submit">Enter challenge</button>
+        <p id="accessMessage" class="form-message" role="status"></p>
+      </form>
+      <div class="pixel-snake" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i><b></b>
+      </div>
+    </div>
+  </section>
+
+  <main id="app" hidden>
+    <header class="event-header">
+      <div>
+        <p class="mini-kicker">SUNWAY PRE-U FRIENDSHIP RUN · 15 AUGUST 2026</p>
+        <h1>Snake <span>Challenge</span></h1>
+      </div>
+      <div class="price-badge"><strong>MYR 3</strong><span>per play · pay F2F</span></div>
+    </header>
+
+    <section class="hero-grid">
+      <article class="intro-card">
+        <div class="poster-mini"><img src="/assets/friendship-run-poster.png" alt="Sunway Pre-U Friendship Run poster" /></div>
+        <div>
+          <p class="section-label">HOW TO PLAY</p>
+          <h2>Eat. Grow. Keep moving.</h2>
+          <p>Pay MYR 3 to the booth staff, register your details, then use the arrow keys or WASD to guide the snake. Your final score is submitted automatically.</p>
+          <div class="rules-row">
+            <span>One official attempt</span><span>No wall wrapping</span><span>Speed increases</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="leaderboard-card">
+        <div class="card-heading">
+          <div><p class="section-label">LIVE SCOREBOARD</p><h2>Top runners</h2></div>
+          <button class="text-button" id="refreshLeaderboard" type="button">Refresh</button>
+        </div>
+        <div id="podium" class="podium"></div>
+        <div id="leaderboard" class="leaderboard-list"><p class="loading-text">Loading scores...</p></div>
+      </article>
+    </section>
+
+    <section class="play-shell">
+      <div class="steps" aria-label="Challenge progress">
+        <div class="step active" data-step="1"><span>1</span><b>Register</b></div>
+        <div class="step" data-step="2"><span>2</span><b>Play</b></div>
+        <div class="step" data-step="3"><span>3</span><b>Score</b></div>
+      </div>
+
+      <section class="panel" id="registrationPanel">
+        <div class="panel-copy">
+          <p class="section-label">PLAYER ENTRY</p>
+          <h2>Register your attempt.</h2>
+          <p>Ask the booth staff to confirm payment using the staff PIN. Student IDs are stored privately and never shown on the public scoreboard.</p>
+        </div>
+        <form id="registrationForm" class="entry-form">
+          <label><span>Full name</span><input id="playerName" maxlength="70" autocomplete="name" required /></label>
+          <label><span>Student ID</span><input id="studentId" maxlength="40" autocomplete="off" required /></label>
+          <label><span>Optional profile picture</span><input id="playerPhoto" type="file" accept="image/jpeg,image/png,image/webp" /><small>JPG, PNG or WEBP. Maximum 400 KB.</small></label>
+          <label><span>Staff payment PIN</span><input id="staffPin" type="password" inputmode="numeric" autocomplete="off" required /></label>
+          <label class="consent-row"><input id="scoreConsent" type="checkbox" required /><span>I agree to have my name, optional picture, and score shown on the event scoreboard.</span></label>
+          <button class="primary-button" type="submit">Confirm entry and continue</button>
+          <p id="registrationMessage" class="form-message" role="status"></p>
+        </form>
+      </section>
+
+      <section class="panel game-panel" id="gamePanel" hidden>
+        <div class="game-topbar">
+          <div><span>PLAYER</span><strong id="currentPlayer">-</strong></div>
+          <div><span>SCORE</span><strong id="scoreValue">000</strong></div>
+          <div><span>BEST TODAY</span><strong id="bestValue">000</strong></div>
+        </div>
+        <div class="game-layout">
+          <div class="nokia-frame">
+            <div class="screen-header"><span>FRIENDSHIP RUN</span><span id="speedLabel">SPEED 1</span></div>
+            <div class="canvas-wrap">
+              <canvas id="gameCanvas" width="480" height="480" aria-label="Snake game board"></canvas>
+              <div class="game-overlay" id="gameOverlay">
+                <strong id="overlayTitle">READY?</strong>
+                <p id="overlayText">Press start, then use Arrow Keys or WASD.</p>
+                <button class="pixel-button" id="startButton" type="button">START GAME</button>
+              </div>
+            </div>
+          </div>
+          <div class="controls-card">
+            <p class="section-label">CONTROLS</p>
+            <div class="key-grid" aria-hidden="true"><i></i><button data-direction="up">▲</button><i></i><button data-direction="left">◀</button><button data-direction="down">▼</button><button data-direction="right">▶</button></div>
+            <p>Keyboard: Arrow Keys or WASD</p>
+            <p>Mobile: Use the buttons above</p>
+            <div class="attempt-warning">The attempt begins when the countdown ends. Leaving or refreshing forfeits the current attempt.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel result-panel" id="resultPanel" hidden>
+        <div class="result-medal">★</div>
+        <p class="section-label">ATTEMPT COMPLETE</p>
+        <h2 id="resultHeadline">Score submitted!</h2>
+        <div class="final-score"><span>FINAL SCORE</span><strong id="finalScore">0</strong></div>
+        <p id="resultMessage">Your result has been added to the live scoreboard.</p>
+        <button class="primary-button" id="newPlayerButton" type="button">Register next player</button>
+      </section>
+    </section>
+
+    <footer><p>Sunway Pre-U Friendship Run 2026 · Snake Challenge</p><span>Tagging along...</span></footer>
+  </main>
+
+  <script src="/friendship-run.js"></script>
+</body>
+</html>
