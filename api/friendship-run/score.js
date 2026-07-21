@@ -39,6 +39,11 @@ export default async function handler(req,res){
       .gt('best_score',score);
     if(rankError) throw rankError;
 
+    if(attempt.payment_id){
+      const paymentUpdate=await supabase.from('friendship_run_payments').update({score,duration_ms:Math.round(duration),completed_at:new Date().toISOString()}).eq('id',attempt.payment_id);
+      if(paymentUpdate.error) throw paymentUpdate.error;
+    }
+
     return json(res,200,{ok:true,rank:(count||0)+1});
   }catch(error){
     console.error('Friendship Run score error:',error);

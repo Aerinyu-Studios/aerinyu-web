@@ -3,7 +3,8 @@ let accessToken = localStorage.getItem('friendship_run_tv_access') || sessionSto
 let refreshTimer = null;
 
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml(entry.name.charAt(0).toUpperCase())}</div>`}
+function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</div>`}
+function rankedEntries(entries=[]){return [...entries].sort((a,b)=>Number(b.score||0)-Number(a.score||0)||String(a.name||'').localeCompare(String(b.name||'')))}
 
 async function api(path, options={}){
   const response = await fetch(`/api/friendship-run/${path}`, {
@@ -56,7 +57,7 @@ function podiumCard(entry,position){
 async function loadLeaderboard(){
   try{
     const data=await api('leaderboard');
-    const entries=data.entries||[];
+    const entries=rankedEntries(data.entries||[]);
     const top=entries.slice(0,3);
     $('#tvPodium').innerHTML=[top[1]&&podiumCard(top[1],2),top[0]&&podiumCard(top[0],1),top[2]&&podiumCard(top[2],3)].filter(Boolean).join('');
     $('#tvLeaderboard').innerHTML=entries.slice(3,12).map((entry,index)=>`<div class="tv-ranking-row"><b>${index+4}</b><div class="tv-player">${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span></div><strong>${entry.score}</strong></div>`).join('')||'<p class="empty-copy">Waiting for more players...</p>';

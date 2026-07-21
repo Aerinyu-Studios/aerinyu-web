@@ -185,7 +185,7 @@ $('#registrationForm').addEventListener('submit', async (event) => {
       body:JSON.stringify({
         name:$('#playerName').value.trim(),
         student_id:$('#studentId').value.trim(),
-        staff_pin:$('#staffPin').value,
+        play_code:$('#playCode').value.trim(),
         consent:$('#scoreConsent').checked,
         photo_data:capturedPhotoData
       })
@@ -270,8 +270,17 @@ function tick(){
 function changeDirection(next){if(!running)return;if(next.x+direction.x===0&&next.y+direction.y===0)return;queuedDirection=next}
 const directions={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
 document.addEventListener('keydown',(event)=>{
+  const activeTag = document.activeElement?.tagName;
+  const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
+  const gameVisible = screens.game.classList.contains('is-active');
+  if (isTyping || !gameVisible || !running) return;
+
   const map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
-  if(map[event.key]){event.preventDefault();changeDirection(directions[map[event.key]])}
+  const mapped = map[event.key];
+  if(mapped){
+    event.preventDefault();
+    changeDirection(directions[mapped]);
+  }
 });
 document.querySelectorAll('[data-direction]').forEach(button=>button.addEventListener('pointerdown',()=>changeDirection(directions[button.dataset.direction])));
 
@@ -315,10 +324,18 @@ document.addEventListener('fullscreenchange',()=>{$('#fullscreenButton').textCon
 
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml(entry.name.charAt(0).toUpperCase())}</div>`}
+function rankedEntries(entries = []) {
+  return [...entries].sort((a,b) => {
+    const scoreDifference = Number(b.score || 0) - Number(a.score || 0);
+    if (scoreDifference !== 0) return scoreDifference;
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  });
+}
+
 async function loadLeaderboard(){
   try{
     const data=await request('leaderboard');
-    const entries=data.entries||[];
+    const entries=rankedEntries(data.entries||[]);
     $('#podium').innerHTML=entries.slice(0,3).map(entry=>`<article class="podium-item">${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
     $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row" style="animation-delay:${Math.min(index,12)*25}ms"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
     $('#bestValue').textContent=String(entries[0]?.score||0).padStart(3,'0');
@@ -340,3 +357,5 @@ $('#newPlayerButton').addEventListener('click',async()=>{
 });
 window.addEventListener('beforeunload',stopCamera);
 validateExistingToken();
+
+$('#playCode')?.addEventListener('input', event => { event.target.value = event.target.value.replace(/\D/g,'').slice(0,6); });

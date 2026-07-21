@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=21" />
+  <link rel="stylesheet" href="/friendship-run.css?v=41" />
 </head>
 <body class="challenge-page">
   <section class="screen gate-screen is-active" id="gateScreen">
@@ -51,11 +51,11 @@
             <div>
               <span class="section-label">HOW IT WORKS</span>
               <h2>Pay. Register. Play.</h2>
-              <p>Each new paid attempt replaces the player's previous result. Staff confirm payment before the game begins.</p>
+              <p>Pay at the booth, receive a six-digit play code, then register and begin. Each new paid attempt replaces the player's previous leaderboard result.</p>
               <div class="fact-grid">
                 <div><strong>01</strong><span>Pay MYR 3</span></div>
-                <div><strong>02</strong><span>Register details</span></div>
-                <div><strong>03</strong><span>Play your round</span></div>
+                <div><strong>02</strong><span>Receive play code</span></div>
+                <div><strong>03</strong><span>Register and play</span></div>
               </div>
             </div>
           </article>
@@ -85,9 +85,9 @@
                 </div>
               </div>
 
-              <label><span>Staff payment PIN</span><input id="staffPin" type="password" inputmode="numeric" autocomplete="off" required /></label>
+              <label><span>6-digit play code</span><input id="playCode" type="text" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" placeholder="000000" required /></label>
               <label class="consent"><input id="scoreConsent" type="checkbox" required /><span>I agree to display my name, optional picture, and score on the event scoreboard.</span></label>
-              <button class="button primary" type="submit">Confirm payment and begin</button>
+              <button class="button primary" type="submit">Redeem code and begin</button>
               <p id="registrationMessage" class="message" role="status"></p>
             </form>
           </section>
@@ -173,6 +173,6 @@
   </dialog>
 
   <canvas id="photoCanvas" width="480" height="480" hidden></canvas>
-  <script src="/friendship-run.js?v=21"></script>
+  <script src="/friendship-run.js?v=41"></script>
 </body>
 </html>
