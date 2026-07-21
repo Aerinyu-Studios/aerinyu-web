@@ -16,7 +16,7 @@ let score = 0;
 let timer = null;
 let running = false;
 let startedAt = 0;
-const cells = 30;
+const cells = 24;
 const grid = canvas.width / cells;
 let audioContext = null;
 let boardFlashUntil = 0;
@@ -210,7 +210,7 @@ function resetGame() {
   score = 0;
   direction = {x:1,y:0};
   queuedDirection = {...direction};
-  snake = [{x:9,y:15},{x:8,y:15},{x:7,y:15},{x:6,y:15}];
+  snake = [{x:8,y:12},{x:7,y:12},{x:6,y:12},{x:5,y:12}];
   placeFood();
   $('#scoreValue').textContent = '000';
   $('#speedLabel').textContent = 'SPEED 1';
@@ -240,9 +240,9 @@ function draw() {
   ctx.arc(food.x*grid+grid/2, food.y*grid+grid/2, grid*.27, 0, Math.PI*2);
   ctx.fill();
   snake.forEach((part,index)=>{
-    ctx.fillStyle = index === 0 ? '#17216b' : (index % 2 ? '#315ae8' : '#5b25d6');
+    ctx.fillStyle = index === 0 ? '#090f23' : (index % 2 ? '#121a31' : '#1a243e');
     ctx.fillRect(part.x*grid+2,part.y*grid+2,grid-4,grid-4);
-    if(index === 0){ctx.fillStyle='#ffffff';ctx.fillRect(part.x*grid+grid*.62,part.y*grid+grid*.22,6,6)}
+    if(index === 0){ctx.fillStyle='#ffffff';ctx.fillRect(part.x*grid+grid*.62,part.y*grid+grid*.22,Math.max(4,grid*.16),Math.max(4,grid*.16))}
   });
 }
 
