@@ -31,16 +31,18 @@ function showGate(message=''){
 
 $('#tvAccessForm').addEventListener('submit',async(event)=>{
   event.preventDefault();
-  const button=event.currentTarget.querySelector('button');
+  const form=event.currentTarget;
+  const button=form.querySelector('button');
   $('#tvAccessMessage').textContent='Checking...';
   button.disabled=true;
   try{
     const data=await api('auth',{method:'POST',body:JSON.stringify({password:$('#tvAccessPassword').value})});
     accessToken=data.token;
     localStorage.setItem('friendship_run_tv_access',accessToken);
-    event.currentTarget.reset();
+    form.reset();
+    const loaded = await loadLeaderboard();
+    if (!loaded) return;
     showBoard();
-    await loadLeaderboard();
     startAutoRefresh();
   }catch(error){$('#tvAccessMessage').textContent=error.message}
   finally{button.disabled=false}
@@ -59,12 +61,16 @@ async function loadLeaderboard(){
     $('#tvPodium').innerHTML=[top[1]&&podiumCard(top[1],2),top[0]&&podiumCard(top[0],1),top[2]&&podiumCard(top[2],3)].filter(Boolean).join('');
     $('#tvLeaderboard').innerHTML=entries.slice(3,12).map((entry,index)=>`<div class="tv-ranking-row"><b>${index+4}</b><div class="tv-player">${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span></div><strong>${entry.score}</strong></div>`).join('')||'<p class="empty-copy">Waiting for more players...</p>';
     $('#lastUpdated').textContent=`Updated ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}`;
+    return true;
   }catch(error){
     if(error.status===401){
       localStorage.removeItem('friendship_run_tv_access');
       accessToken='';
       showGate('Session expired. Enter the event password again.');
+    } else {
+      $('#lastUpdated').textContent = 'Connection interrupted · retrying';
     }
+    return false;
   }
 }
 
@@ -76,10 +82,11 @@ function startAutoRefresh(){
 async function init(){
   if(!accessToken) return showGate();
   try{
+    const loaded = await loadLeaderboard();
+    if (!loaded) return;
     showBoard();
-    await loadLeaderboard();
     startAutoRefresh();
-  }catch{showGate()}
+  }catch{showGate('Could not open the live display. Please try again.')}
 }
 
 init();

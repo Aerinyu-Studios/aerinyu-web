@@ -18,6 +18,27 @@ let running = false;
 let startedAt = 0;
 const cells = 30;
 const grid = canvas.width / cells;
+let audioContext = null;
+let boardFlashUntil = 0;
+
+function tone(frequency, duration = 0.07, type = 'square', volume = 0.035) {
+  try {
+    audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = type;
+    oscillator.frequency.value = frequency;
+    gain.gain.setValueAtTime(volume, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+    oscillator.connect(gain).connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + duration);
+  } catch {}
+}
+
+function playEatSound() { tone(620, .055, 'square', .04); setTimeout(() => tone(820, .06, 'square', .03), 35); }
+function playStartSound() { tone(420, .07); setTimeout(() => tone(560, .07), 90); setTimeout(() => tone(760, .1), 180); }
+function playGameOverSound() { tone(320, .12, 'sawtooth', .035); setTimeout(() => tone(210, .18, 'sawtooth', .03), 100); }
 
 function showScreen(name) {
   Object.entries(screens).forEach(([key, element]) => {
@@ -52,15 +73,16 @@ async function request(path, options = {}) {
 
 $('#accessForm').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const form = event.currentTarget;
   const message = $('#accessMessage');
-  const button = event.currentTarget.querySelector('button');
+  const button = form.querySelector('button');
   message.textContent = 'Checking...';
   button.disabled = true;
   try {
     const data = await request('auth', {method:'POST', body:JSON.stringify({password:$('#accessPassword').value})});
     accessToken = data.token;
     sessionStorage.setItem('friendship_run_access', accessToken);
-    event.currentTarget.reset();
+    form.reset();
     showScreen('registration');
     await loadLeaderboard();
   } catch (error) {
@@ -137,6 +159,7 @@ $('#capturePhotoButton').addEventListener('click', () => {
   $('#capturedPhoto').hidden = false;
   $('#cameraPlaceholder').hidden = true;
   $('#removePhotoButton').hidden = false;
+  $('#openCameraButton').textContent = 'Retake photo';
   closeCamera();
 });
 
@@ -146,6 +169,7 @@ $('#removePhotoButton').addEventListener('click', () => {
   $('#capturedPhoto').hidden = true;
   $('#cameraPlaceholder').hidden = false;
   $('#removePhotoButton').hidden = true;
+  $('#openCameraButton').textContent = 'Take player photo';
 });
 
 $('#registrationForm').addEventListener('submit', async (event) => {
@@ -203,18 +227,21 @@ function placeFood() {
 }
 
 function draw() {
-  ctx.fillStyle = '#c9d69b';
+  ctx.fillStyle = Date.now() < boardFlashUntil ? '#d7e5aa' : '#c9d69b';
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  ctx.strokeStyle = 'rgba(42,54,43,.06)';
+  ctx.strokeStyle = 'rgba(30,44,34,.11)';
+  ctx.lineWidth = 1;
   for(let i=0;i<=cells;i++){
     ctx.beginPath();ctx.moveTo(i*grid,0);ctx.lineTo(i*grid,canvas.height);ctx.stroke();
     ctx.beginPath();ctx.moveTo(0,i*grid);ctx.lineTo(canvas.width,i*grid);ctx.stroke();
   }
   ctx.fillStyle = '#202a22';
-  ctx.fillRect(food.x*grid+7,food.y*grid+7,grid-14,grid-14);
+  ctx.beginPath();
+  ctx.arc(food.x*grid+grid/2, food.y*grid+grid/2, grid*.27, 0, Math.PI*2);
+  ctx.fill();
   snake.forEach((part,index)=>{
     ctx.fillStyle = index === 0 ? '#131b15' : '#344137';
-    ctx.fillRect(part.x*grid+3,part.y*grid+3,grid-6,grid-6);
+    ctx.fillRect(part.x*grid+2,part.y*grid+2,grid-4,grid-4);
     if(index === 0){ctx.fillStyle='#c9d69b';ctx.fillRect(part.x*grid+grid*.64,part.y*grid+grid*.22,5,5)}
   });
 }
@@ -229,6 +256,11 @@ function tick(){
   snake.unshift(head);
   if(head.x===food.x&&head.y===food.y){
     score++;
+    boardFlashUntil = Date.now() + 90;
+    playEatSound();
+    $('#scoreValue').classList.remove('score-pop');
+    void $('#scoreValue').offsetWidth;
+    $('#scoreValue').classList.add('score-pop');
     $('#scoreValue').textContent=String(score).padStart(3,'0');
     $('#speedLabel').textContent=`SPEED ${speedLevel()}`;
     placeFood();scheduleTick();
@@ -245,8 +277,10 @@ document.querySelectorAll('[data-direction]').forEach(button=>button.addEventLis
 
 $('#startButton').addEventListener('click',async()=>{
   $('#startButton').hidden=true;
+  audioContext?.resume?.();
   for(const value of ['3','2','1','GO!']){
     $('#overlayTitle').textContent=value;
+    tone(value === 'GO!' ? 760 : 420 + (3 - Number(value || 3)) * 90, value === 'GO!' ? .12 : .055);
     $('#overlayText').textContent=value==='GO!'?'Good luck!':'';
     await new Promise(resolve=>setTimeout(resolve,value==='GO!'?400:650));
   }
@@ -258,7 +292,7 @@ $('#startButton').addEventListener('click',async()=>{
 
 async function endGame(){
   if(!running)return;
-  running=false;clearInterval(timer);
+  running=false;clearInterval(timer);playGameOverSound();
   $('#gameOverlay').hidden=false;$('#overlayTitle').textContent='GAME OVER';$('#overlayText').textContent='Submitting score...';$('#startButton').hidden=true;
   try{
     const data=await request('score',{method:'POST',body:JSON.stringify({attempt_token:attemptToken,score,duration_ms:Date.now()-startedAt})});
@@ -277,7 +311,7 @@ $('#fullscreenButton').addEventListener('click',async()=>{
     else await document.exitFullscreen();
   }catch{}
 });
-document.addEventListener('fullscreenchange',()=>{$('#fullscreenButton').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
+document.addEventListener('fullscreenchange',()=>{$('#fullscreenButton').textContent=document.fullscreenElement?'Exit fullscreen':'Enter fullscreen'});
 
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml(entry.name.charAt(0).toUpperCase())}</div>`}
@@ -286,7 +320,7 @@ async function loadLeaderboard(){
     const data=await request('leaderboard');
     const entries=data.entries||[];
     $('#podium').innerHTML=entries.slice(0,3).map(entry=>`<article class="podium-item">${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
-    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
+    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row" style="animation-delay:${Math.min(index,12)*25}ms"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
     $('#bestValue').textContent=String(entries[0]?.score||0).padStart(3,'0');
   }catch(error){$('#leaderboard').innerHTML=`<p class="empty-copy">${escapeHtml(error.message)}</p>`}
 }
@@ -300,6 +334,7 @@ $('#newPlayerButton').addEventListener('click',async()=>{
   $('#capturedPhoto').hidden=true;
   $('#cameraPlaceholder').hidden=false;
   $('#removePhotoButton').hidden=true;
+  $('#openCameraButton').textContent='Take player photo';
   showScreen('registration');
   await loadLeaderboard();
 });

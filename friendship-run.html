@@ -8,8 +8,8 @@
   <title>Friendship Run Snake Challenge</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=8" />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/friendship-run.css?v=12" />
 </head>
 <body class="challenge-page">
   <section class="screen gate-screen is-active" id="gateScreen">
@@ -75,13 +75,13 @@
 
               <div class="camera-field">
                 <div class="camera-preview" id="cameraPreview" aria-live="polite">
-                  <span id="cameraPlaceholder">No photo captured</span>
+                  <div id="cameraPlaceholder" class="camera-placeholder"><span class="camera-icon" aria-hidden="true">◎</span><strong>No photo yet</strong><small>Optional</small></div>
                   <img id="capturedPhoto" alt="Captured player photo" hidden />
                 </div>
                 <div class="camera-actions">
-                  <button class="button secondary" id="openCameraButton" type="button">Open camera</button>
+                  <button class="button secondary" id="openCameraButton" type="button">Take player photo</button>
                   <button class="text-button" id="removePhotoButton" type="button" hidden>Remove photo</button>
-                  <small>Optional. The camera is used directly; no file upload is required.</small>
+                  <small>Optional. Add a player photo for the live scoreboard.</small>
                 </div>
               </div>
 
@@ -114,7 +114,7 @@
           <div><span>SCORE</span><strong id="scoreValue">000</strong></div>
           <div><span>TOP SCORE</span><strong id="bestValue">000</strong></div>
         </div>
-        <button id="fullscreenButton" class="button secondary compact" type="button">Fullscreen</button>
+        <button id="fullscreenButton" class="button secondary compact" type="button">Enter fullscreen</button>
       </header>
 
       <section class="game-stage">
@@ -140,7 +140,7 @@
             <div><dt>Keyboard</dt><dd>Arrow Keys or WASD</dd></div>
             <div><dt>Mobile</dt><dd>Use the controls above</dd></div>
           </dl>
-          <div class="notice">Leaving or refreshing during the game forfeits the current attempt.</div>
+          <div class="notice"><strong>Official attempt</strong><span>Leaving or refreshing during play forfeits this attempt.</span></div>
         </aside>
       </section>
     </div>
@@ -173,6 +173,6 @@
   </dialog>
 
   <canvas id="photoCanvas" width="480" height="480" hidden></canvas>
-  <script src="/friendship-run.js?v=8"></script>
+  <script src="/friendship-run.js?v=12"></script>
 </body>
 </html>
