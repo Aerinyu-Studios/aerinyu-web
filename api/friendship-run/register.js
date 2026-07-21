@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
-import { access, clean, json, safeEqual, sign, supabase } from './_lib.js';
+import { access, clean, friendlyDatabaseError, getSupabase, json, safeEqual, sign } from './_lib.js';
 export default async function handler(req,res){
   if(req.method!=='POST') return json(res,405,{error:'Method not allowed.'});
   try{access(req);}catch{return json(res,401,{error:'Your access session expired.'});}
+  try {
+  const supabase = getSupabase();
   const name=clean(req.body?.name,70), studentId=clean(req.body?.student_id,40);
   if(name.length<2||studentId.length<3) return json(res,400,{error:'Enter a valid name and student ID.'});
   if(req.body?.consent!==true) return json(res,400,{error:'Scoreboard consent is required.'});
@@ -33,4 +35,8 @@ export default async function handler(req,res){
   }
   const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,nonce:crypto.randomUUID(),started_at:Date.now()},60*30);
   return json(res,200,{player:{id:player.id,name:player.name,photo_url:player.photo_url},best_score:player.best_score||0,attempt_token:attemptToken});
+  } catch (error) {
+    console.error('Friendship Run registration error:', error);
+    return json(res,500,{error:friendlyDatabaseError(error)});
+  }
 }
