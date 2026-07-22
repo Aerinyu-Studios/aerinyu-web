@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Press+Start+2P&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=42" />
+  <link rel="stylesheet" href="/friendship-run.css?v=52" />
 </head>
 <body class="challenge-page">
   <section class="screen gate-screen is-active" id="gateScreen">
@@ -64,14 +64,23 @@
             <div class="entry-copy">
               <span class="section-label">NEW ATTEMPT</span>
               <h2>Register player</h2>
-              <p>Student IDs remain private. Only the player's name, optional camera photo, and latest score appear publicly.</p>
+              <p>Student IDs remain private. Only the player's name, programme, optional camera photo, message, and latest score appear publicly.</p>
             </div>
 
             <form id="registrationForm" class="entry-form">
               <div class="field-grid">
                 <label><span>Full name</span><input id="playerName" maxlength="70" autocomplete="name" required /></label>
                 <label><span>Student ID</span><input id="studentId" maxlength="40" autocomplete="off" required /></label>
+                <label><span>Programme</span><input id="playerProgramme" maxlength="60" list="programmeOptions" autocomplete="off" placeholder="e.g. CIMP" required /></label>
+                <label><span>Message <small>(optional)</small></span><input id="playerMessage" maxlength="180" autocomplete="off" placeholder="Leave a short message" /></label>
               </div>
+              <datalist id="programmeOptions">
+                <option value="A-Level"></option>
+                <option value="AUSMAT"></option>
+                <option value="CIMP"></option>
+                <option value="FIA"></option>
+                <option value="MUFY"></option>
+              </datalist>
 
               <div class="camera-field">
                 <div class="camera-preview" id="cameraPreview" aria-live="polite">
@@ -86,7 +95,7 @@
               </div>
 
               <label><span>6-digit play code</span><input id="playCode" type="text" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="one-time-code" placeholder="000000" required /></label>
-              <label class="consent"><input id="scoreConsent" type="checkbox" required /><span>I agree to display my name, optional picture, and score on the event scoreboard.</span></label>
+              <label class="consent"><input id="scoreConsent" type="checkbox" required /><span>I agree to display my name, programme, optional picture, message, and score on the event scoreboard.</span></label>
               <button class="button primary" type="submit">Redeem code and begin</button>
               <p id="registrationMessage" class="message" role="status"></p>
             </form>
@@ -172,7 +181,18 @@
     </div>
   </dialog>
 
+  <dialog id="messageDialog" class="message-dialog">
+    <div class="message-dialog-head">
+      <div><span class="section-label">PLAYER MESSAGE</span><h2 id="messageDialogName">Message</h2></div>
+      <button id="closeMessageDialog" class="dialog-close" type="button" aria-label="Close message">×</button>
+    </div>
+    <div class="message-dialog-body">
+      <span id="messageDialogProgramme" class="message-programme"></span>
+      <p id="messageDialogText"></p>
+    </div>
+  </dialog>
+
   <canvas id="photoCanvas" width="480" height="480" hidden></canvas>
-  <script src="/friendship-run.js?v=42"></script>
+  <script src="/friendship-run.js?v=52"></script>
 </body>
 </html>

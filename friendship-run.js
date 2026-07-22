@@ -172,11 +172,6 @@ $('#removePhotoButton').addEventListener('click', () => {
   $('#openCameraButton').textContent = 'Take player photo';
 });
 
-const playCodeInput = $('#playCode');
-playCodeInput?.addEventListener('input', () => {
-  playCodeInput.value = playCodeInput.value.replace(/\D/g, '').slice(0, 6);
-});
-
 $('#registrationForm').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
@@ -188,10 +183,12 @@ $('#registrationForm').addEventListener('submit', async (event) => {
     const data = await request('register', {
       method:'POST',
       body:JSON.stringify({
-        name:($('#playerName')?.value || '').trim(),
-        student_id:($('#studentId')?.value || '').trim(),
-        play_code:($('#playCode')?.value || '').replace(/\D/g, '').slice(0, 6),
-        consent:Boolean($('#scoreConsent')?.checked),
+        name:$('#playerName').value.trim(),
+        student_id:$('#studentId').value.trim(),
+        programme:$('#playerProgramme').value.trim(),
+        message:$('#playerMessage').value.trim(),
+        play_code:$('#playCode').value.trim(),
+        consent:$('#scoreConsent').checked,
         photo_data:capturedPhotoData
       })
     });
@@ -341,13 +338,26 @@ async function loadLeaderboard(){
   try{
     const data=await request('leaderboard');
     const entries=rankedEntries(data.entries||[]);
-    const top = entries.slice(0, 3);
-    const podiumOrder = [top[1] && {entry: top[1], rank: 2, cls: 'second'}, top[0] && {entry: top[0], rank: 1, cls: 'first'}, top[2] && {entry: top[2], rank: 3, cls: 'third'}].filter(Boolean);
-    $('#podium').innerHTML = podiumOrder.map(({entry, rank, cls}) => `<article class="podium-item ${cls}"><b>${rank}</b>${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><span>${entry.score}</span></article>`).join('');
-    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row" style="animation-delay:${Math.min(index,12)*25}ms"><b>${index+1}</b>${avatarMarkup(entry)}<span>${escapeHtml(entry.name)}</span><strong>${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
+    $('#podium').innerHTML=entries.slice(0,3).map((entry,index)=>`<article class="podium-item" style="animation-delay:${index*45}ms">${avatarMarkup(entry)}<strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.programme || 'Programme not provided')}</small><span>${entry.score}</span>${entry.message?`<button class="message-button" type="button" data-message-index="${index}">View message</button>`:''}</article>`).join('');
+    $('#leaderboard').innerHTML=entries.length?entries.map((entry,index)=>`<div class="score-row" style="animation-delay:${Math.min(index,12)*25}ms"><b>${index+1}</b>${avatarMarkup(entry)}<div class="score-player-copy"><strong>${escapeHtml(entry.name)}</strong><small>${escapeHtml(entry.programme || 'Programme not provided')}</small></div>${entry.message?`<button class="message-button compact-message" type="button" data-message-index="${index}">Message</button>`:'<span></span>'}<strong class="row-score">${entry.score}</strong></div>`).join(''):'<p class="empty-copy">No scores yet.</p>';
+    document.querySelectorAll('[data-message-index]').forEach(button=>{
+      button.addEventListener('click',()=>openMessageDialog(entries[Number(button.dataset.messageIndex)]));
+    });
     $('#bestValue').textContent=String(entries[0]?.score||0).padStart(3,'0');
   }catch(error){$('#leaderboard').innerHTML=`<p class="empty-copy">${escapeHtml(error.message)}</p>`}
 }
+function openMessageDialog(entry){
+  if(!entry?.message)return;
+  $('#messageDialogName').textContent=entry.name || 'Player message';
+  $('#messageDialogProgramme').textContent=entry.programme || 'Programme not provided';
+  $('#messageDialogText').textContent=entry.message;
+  $('#messageDialog').showModal();
+}
+function closeMessageDialog(){if($('#messageDialog').open)$('#messageDialog').close()}
+$('#closeMessageDialog').addEventListener('click',closeMessageDialog);
+$('#messageDialog').addEventListener('cancel',(event)=>{event.preventDefault();closeMessageDialog()});
+$('#messageDialog').addEventListener('click',(event)=>{if(event.target===$('#messageDialog'))closeMessageDialog()});
+
 $('#refreshLeaderboard').addEventListener('click',loadLeaderboard);
 $('#newPlayerButton').addEventListener('click',async()=>{
   $('#registrationForm').reset();

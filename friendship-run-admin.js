@@ -12,7 +12,7 @@ function renderPlayers(){
   const query=$('#adminSearch').value.trim().toLowerCase();
   const filtered=entries.filter(e=>`${e.name} ${e.student_id}`.toLowerCase().includes(query));
   $('#adminEntries').innerHTML=filtered.length?filtered.map(entry=>`<article class="panel fr-admin-entry" data-id="${entry.id}">
-    <div class="fr-admin-entry-main">${entry.photo_url?`<img class="admin-avatar" src="${esc(entry.photo_url)}" alt="">`:`<div class="admin-avatar fallback">${esc(entry.name?.[0]||'?')}</div>`}<div><strong>${esc(entry.name)}</strong><span>${esc(entry.student_id)}</span></div></div>
+    <div class="fr-admin-entry-main">${entry.photo_url?`<img class="admin-avatar" src="${esc(entry.photo_url)}" alt="">`:`<div class="admin-avatar fallback">${esc(entry.name?.[0]||'?')}</div>`}<div><strong>${esc(entry.name)}</strong><span>${esc(entry.programme||'No programme')} · ${esc(entry.student_id)}</span>${entry.message?`<small class="admin-player-message">${esc(entry.message)}</small>`:''}</div></div>
     <div class="fr-admin-meta"><span>Score <b>${entry.best_score??0}</b></span><span>${entry.attempt_used?'Submitted':'Open attempt'}</span></div>
     <div class="fr-admin-actions"><button class="button secondary" data-edit-player>Edit</button><button class="button secondary" data-reset-player>Reset attempt</button><button class="button danger" data-delete-player>Delete</button></div>
   </article>`).join(''):'<p class="empty-copy">No matching player entries.</p>';
@@ -36,7 +36,7 @@ function renderPayments(){
 }
 function render(){renderPlayers();renderPayments()}
 async function load(){const data=await api();entries=data.entries||[];payments=data.payments||[];render()}
-async function editPlayer(e){const id=e.target.closest('[data-id]').dataset.id,entry=entries.find(x=>x.id===id);const name=prompt('Player name',entry.name);if(name===null)return;const student_id=prompt('Student ID',entry.student_id);if(student_id===null)return;const score=prompt('Score',String(entry.best_score??0));if(score===null)return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({name,student_id,best_score:Number(score),attempt_used:true})});await load()}
+async function editPlayer(e){const id=e.target.closest('[data-id]').dataset.id,entry=entries.find(x=>x.id===id);const name=prompt('Player name',entry.name);if(name===null)return;const student_id=prompt('Student ID',entry.student_id);if(student_id===null)return;const programme=prompt('Programme',entry.programme||'');if(programme===null)return;const message=prompt('Player message (optional)',entry.message||'');if(message===null)return;const score=prompt('Score',String(entry.best_score??0));if(score===null)return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({name,student_id,programme,message,best_score:Number(score),attempt_used:true})});await load()}
 async function resetPlayer(e){const id=e.target.closest('[data-id]').dataset.id;if(!confirm('Reset this attempt and score?'))return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({reset_attempt:true})});await load()}
 async function deletePlayer(e){const id=e.target.closest('[data-id]').dataset.id;if(!confirm('Delete this player entry? Payment records will remain.'))return;await api(`?id=${id}`,{method:'DELETE'});await load()}
 async function regeneratePayment(e){const id=e.target.closest('[data-payment-id]').dataset.paymentId;if(!confirm('Generate a new six-digit code and extend validity by 30 minutes?'))return;await api(`?type=payment&id=${id}`,{method:'PATCH',body:JSON.stringify({regenerate_code:true})});await load()}

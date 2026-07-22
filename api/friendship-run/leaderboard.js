@@ -17,7 +17,7 @@ export default async function handler(req, res) {
     const supabase = getSupabase();
     const { data, error } = await supabase
       .from('friendship_run_players')
-      .select('name,photo_url,best_score,attempt_finished_at')
+      .select('name,programme,message,photo_url,best_score,attempt_finished_at')
       .eq('attempt_used', true)
       .order('best_score', { ascending: false })
       .order('attempt_finished_at', { ascending: true })
@@ -28,6 +28,8 @@ export default async function handler(req, res) {
     return json(res, 200, {
       entries: (data || []).map((row) => ({
         name: row.name,
+        programme: row.programme || '',
+        message: row.message || '',
         photo_url: row.photo_url,
         score: row.best_score || 0
       }))

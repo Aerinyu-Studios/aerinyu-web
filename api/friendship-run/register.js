@@ -9,8 +9,11 @@ export default async function handler(req,res){
     const supabase=getSupabase();
     const name=clean(req.body?.name,70);
     const studentId=clean(req.body?.student_id,40);
+    const programme=clean(req.body?.programme,60);
+    const playerMessage=clean(req.body?.message,180);
     const playCode=String(req.body?.play_code||'').replace(/\D/g,'').slice(0,6);
     if(name.length<2||studentId.length<3) return json(res,400,{error:'Enter a valid name and student ID.'});
+    if(programme.length<2) return json(res,400,{error:'Enter the player programme.'});
     if(!/^\d{6}$/.test(playCode)) return json(res,400,{error:'Enter the six-digit play code from the booth.'});
     if(req.body?.consent!==true) return json(res,400,{error:'Scoreboard consent is required.'});
 
@@ -50,7 +53,7 @@ export default async function handler(req,res){
     const nonce=crypto.randomUUID();
     const attemptStartedAt=new Date().toISOString();
     const payload={
-      name,student_id:studentId,student_id_normalized:normalized,photo_url:photoUrl,
+      name,programme,message:playerMessage,student_id:studentId,student_id_normalized:normalized,photo_url:photoUrl,
       payment_confirmed:true,score:null,best_score:0,duration_ms:null,attempt_used:false,
       attempt_started_at:attemptStartedAt,attempt_finished_at:null,current_attempt_nonce:nonce,
       current_payment_id:payment.id,updated_at:new Date().toISOString()
@@ -74,7 +77,7 @@ export default async function handler(req,res){
     if(top.error) throw top.error;
 
     const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,payment_id:payment.id,nonce,started_at:Date.now()},60*30);
-    return json(res,200,{player:{id:player.id,name:player.name,photo_url:player.photo_url},top_score:top.data?.best_score||0,attempt_token:attemptToken});
+    return json(res,200,{player:{id:player.id,name:player.name,programme:player.programme,message:player.message,photo_url:player.photo_url},top_score:top.data?.best_score||0,attempt_token:attemptToken});
   }catch(error){
     console.error('Friendship Run registration error:',error);
     return json(res,500,{error:friendlyDatabaseError(error)});

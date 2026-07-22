@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=42" />
+  <link rel="stylesheet" href="/friendship-run.css?v=52" />
 </head>
 <body class="tv-page">
   <section class="tv-gate is-active" id="tvGate">
@@ -45,6 +45,17 @@
     <footer class="tv-footer"><span>SUNWAY COLLEGE</span><span>FRIENDSHIP RUN 2026</span><span>LIVE EVENT DISPLAY</span></footer>
   </main>
 
-  <script src="/friendship-run-leaderboard.js?v=41"></script>
+  <dialog id="tvMessageDialog" class="message-dialog tv-message-dialog">
+    <div class="message-dialog-head">
+      <div><span class="section-label">PLAYER MESSAGE</span><h2 id="tvMessageName">Message</h2></div>
+      <button id="closeTvMessage" class="dialog-close" type="button" aria-label="Close message">×</button>
+    </div>
+    <div class="message-dialog-body">
+      <span id="tvMessageProgramme" class="message-programme"></span>
+      <p id="tvMessageText"></p>
+    </div>
+  </dialog>
+
+  <script src="/friendship-run-leaderboard.js?v=52"></script>
 </body>
 </html>

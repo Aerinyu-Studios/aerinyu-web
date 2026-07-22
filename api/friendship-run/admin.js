@@ -75,6 +75,8 @@ export default async function handler(req, res) {
       const body = req.body || {};
       const update = { updated_at: new Date().toISOString() };
       if ('name' in body) update.name = clean(body.name, 70);
+      if ('programme' in body) update.programme = clean(body.programme, 60);
+      if ('message' in body) update.message = clean(body.message, 180);
       if ('student_id' in body) {
         update.student_id = clean(body.student_id, 40);
         update.student_id_normalized = update.student_id.toUpperCase().replace(/\s+/g, '');

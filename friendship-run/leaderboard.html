@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=21" />
+  <link rel="stylesheet" href="/friendship-run.css?v=52" />
 </head>
 <body class="tv-page">
   <section class="tv-gate is-active" id="tvGate">
@@ -26,21 +26,14 @@
   </section>
 
   <main class="tv-board" id="tvBoard" hidden>
-    <header class="tv-header branded-tv-header">
-      <div class="tv-poster-wrap"><img src="/assets/friendship-run-poster.png" alt="Friendship Run poster" /></div>
-      <div class="tv-brand">
+    <header class="tv-header tv-header-simple">
+      <div class="tv-brand-simple">
         <span>SUNWAY PRE-U FRIENDSHIP RUN</span>
-        <h1>LIVE LEADERBOARD</h1>
-        <p>Snake Challenge · Eat. Grow. Keep moving.</p>
+        <h1>Live Leaderboard</h1>
+        <p>Snake Challenge</p>
       </div>
-      <div class="tv-live"><i></i><span>LIVE SCOREBOARD</span><small id="lastUpdated">Updating...</small></div>
+      <div class="tv-live"><i></i><span>LIVE</span><small id="lastUpdated">Updating...</small></div>
     </header>
-
-    <section class="tv-highlight-strip">
-      <span>MYR 3 PER PLAY</span>
-      <span>PAY · REGISTER · PLAY</span>
-      <span>15 AUGUST 2026</span>
-    </section>
 
     <section class="tv-podium" id="tvPodium"></section>
 
@@ -52,6 +45,17 @@
     <footer class="tv-footer"><span>SUNWAY COLLEGE</span><span>FRIENDSHIP RUN 2026</span><span>LIVE EVENT DISPLAY</span></footer>
   </main>
 
-  <script src="/friendship-run-leaderboard.js?v=21"></script>
+  <dialog id="tvMessageDialog" class="message-dialog tv-message-dialog">
+    <div class="message-dialog-head">
+      <div><span class="section-label">PLAYER MESSAGE</span><h2 id="tvMessageName">Message</h2></div>
+      <button id="closeTvMessage" class="dialog-close" type="button" aria-label="Close message">×</button>
+    </div>
+    <div class="message-dialog-body">
+      <span id="tvMessageProgramme" class="message-programme"></span>
+      <p id="tvMessageText"></p>
+    </div>
+  </dialog>
+
+  <script src="/friendship-run-leaderboard.js?v=52"></script>
 </body>
 </html>
