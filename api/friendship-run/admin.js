@@ -24,8 +24,20 @@ export default async function handler(req, res) {
         const signed = await supabase.storage.from('friendship-run-payment-proofs').createSignedUrl(payment.proof_path, 60 * 10);
         return { ...payment, proof_url: signed.data?.signedUrl || null };
       }));
-      const boothFunds = payments.filter(p => p.attempt_type === 'official' && p.eligibility_source === 'booth_payment').reduce((s,p)=>s+Number(p.amount_collected||0),0);
-      return json(res, 200, { entries: playersResult.data || [], payments, audit: auditResult.data || [], totals: { booth_funds: boothFunds } });
+      const boothPayments = payments.filter(p => p.attempt_type === 'official' && p.eligibility_source === 'booth_payment');
+      const sum = rows => rows.reduce((total, row) => total + Number(row.amount_collected || 0), 0);
+      const totals = {
+        booth_funds: sum(boothPayments),
+        cash_funds: sum(boothPayments.filter(p => p.payment_method === 'cash')),
+        digital_funds: sum(boothPayments.filter(p => p.payment_method === 'digital')),
+        booth_attempts: boothPayments.length,
+        run_signup_attempts: payments.filter(p => p.attempt_type === 'official' && p.eligibility_source === 'run_signup').length,
+        free_trials: payments.filter(p => p.attempt_type === 'trial').length,
+        redeemed_codes: payments.filter(p => p.status === 'redeemed').length,
+        unused_codes: payments.filter(p => p.status === 'unused').length,
+        total_records: payments.length
+      };
+      return json(res, 200, { entries: playersResult.data || [], payments, audit: auditResult.data || [], totals });
     }
 
     const type = clean(req.query?.type, 20) || 'player';

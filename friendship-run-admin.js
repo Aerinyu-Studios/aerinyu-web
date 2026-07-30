@@ -1,6 +1,6 @@
 const $ = selector => document.querySelector(selector);
 let adminKey = sessionStorage.getItem('friendship_run_admin_key') || '';
-let entries = [], payments = [];
+let entries = [], payments = [], totals = {};
 const esc = (value='') => String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
 async function api(path='',options={}){
@@ -35,7 +35,19 @@ function renderPayments(){
   document.querySelectorAll('[data-delete-payment]').forEach(b=>b.onclick=deletePayment);
 }
 function render(){renderPlayers();renderPayments()}
-async function load(){const data=await api();entries=data.entries||[];payments=data.payments||[];render()}
+function renderStats(){
+  const money=v=>`MYR ${Number(v||0).toFixed(0)}`;
+  $('#adminBoothFunds').textContent=money(totals.booth_funds);
+  $('#adminCashFunds').textContent=money(totals.cash_funds);
+  $('#adminDigitalFunds').textContent=money(totals.digital_funds);
+  $('#adminRunSignups').textContent=totals.run_signup_attempts||0;
+  $('#adminFreeTrials').textContent=totals.free_trials||0;
+  $('#adminCodes').textContent=totals.total_records||0;
+  $('#adminCashCount').textContent=`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='cash').length} official attempts`;
+  $('#adminDigitalCount').textContent=`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='digital').length} official attempts`;
+  $('#adminCodesDetail').textContent=`${totals.unused_codes||0} unused · ${totals.redeemed_codes||0} redeemed`;
+}
+async function load(){const data=await api();entries=data.entries||[];payments=data.payments||[];totals=data.totals||{};renderStats();render()}
 async function editPlayer(e){const id=e.target.closest('[data-id]').dataset.id,entry=entries.find(x=>x.id===id);const name=prompt('Player name',entry.name);if(name===null)return;const student_id=prompt('Student ID',entry.student_id);if(student_id===null)return;const score=prompt('Score',String(entry.best_score??0));if(score===null)return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({name,student_id,best_score:Number(score),attempt_used:true})});await load()}
 async function resetPlayer(e){const id=e.target.closest('[data-id]').dataset.id;if(!confirm('Reset this attempt and score?'))return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({reset_attempt:true})});await load()}
 async function deletePlayer(e){const id=e.target.closest('[data-id]').dataset.id;if(!confirm('Delete this player entry? Payment records will remain.'))return;await api(`?id=${id}`,{method:'DELETE'});await load()}
