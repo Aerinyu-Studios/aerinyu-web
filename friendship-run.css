@@ -922,3 +922,79 @@ body{
 
 @media(max-width:1180px){.admin-booth-overview{grid-template-columns:repeat(3,1fr)}}
 @media(max-width:760px){.admin-booth-overview{grid-template-columns:repeat(2,1fr)}.leaderboard-panel .podium{grid-template-columns:repeat(3,minmax(0,1fr))}.leaderboard-panel .podium-item{min-height:170px!important}.tv-ranking-row{grid-template-columns:44px minmax(0,1fr) 70px!important}}
+
+/* v56 — booth readability, admin resilience styling, podium hierarchy */
+
+/* Make native choice controls compact and predictable. */
+.booth-page input[type="radio"],
+.booth-page input[type="checkbox"]{
+  width:20px!important;
+  min-width:20px!important;
+  height:20px!important;
+  min-height:20px!important;
+  padding:0!important;
+  margin:1px 0 0!important;
+  accent-color:var(--blue);
+  box-shadow:none!important;
+}
+
+/* Booth workspace: calmer, clearer cards. */
+.booth-shell{width:min(1120px,calc(100% - 44px));padding:34px 0 64px}
+.booth-header{display:flex;align-items:flex-end;justify-content:space-between;gap:28px;padding:0 0 20px;margin-bottom:18px;border-bottom:1px solid #bccbe2}
+.booth-header>div:first-child{max-width:760px}
+.booth-header h1{margin:5px 0 7px;font-size:clamp(36px,4vw,58px);line-height:.95;letter-spacing:-.055em;color:var(--navy)}
+.booth-header p{margin:0;color:var(--muted);font-size:15px;line-height:1.55}
+.booth-price{display:grid;justify-items:end;padding:10px 14px;border:1px solid #b9c8df;border-radius:8px;background:#fff;box-shadow:0 8px 22px rgba(34,67,125,.08)}
+.booth-price strong{font-size:24px;color:var(--navy);line-height:1}.booth-price span{margin-top:4px;color:var(--muted);font-size:10px;font-weight:800;letter-spacing:.11em}
+.booth-form-card{padding:28px 30px!important}
+.booth-form-heading{padding-bottom:18px;margin-bottom:20px!important;border-bottom:1px solid #dbe4f1}
+.booth-form-heading h2{margin:6px 0 8px;font-size:32px;line-height:1;color:var(--navy)}
+.booth-form-heading p{margin:0;font-size:14px;line-height:1.55}
+.choice-group{padding:14px!important;gap:10px!important;background:#f7faff!important;border:1px solid #c9d6ea!important;border-radius:10px!important}
+.choice-group legend{font-size:14px;font-weight:800;color:var(--navy);padding:0 8px}
+.choice-card{display:grid!important;grid-template-columns:24px 1fr;align-items:start!important;gap:11px!important;min-height:96px;padding:16px!important;border-radius:9px!important;background:#fff!important}
+.choice-card:has(input:checked){background:#eef4ff!important;border-color:#4c75db!important;box-shadow:0 0 0 2px rgba(76,117,219,.10)!important}
+.choice-card span{min-width:0}.choice-card strong{font-size:14px;color:var(--navy)}.choice-card small{font-size:12px;line-height:1.45}
+.proof-capture{grid-template-columns:minmax(0,1fr) 210px!important;gap:16px!important;padding:18px!important;border-radius:10px!important;background:#f7faff!important}
+.proof-copy h3{font-size:20px;margin:5px 0 6px}.proof-copy p{margin:0;font-size:13px;line-height:1.5}
+.proof-preview{min-height:138px;border:1px dashed #9eb2d2;background:#edf3fc;border-radius:8px;display:grid;place-items:center;text-align:center;padding:14px}
+.proof-actions{display:grid;align-content:center;gap:8px}.proof-actions .button{width:100%}
+.booth-page textarea{width:100%;min-height:88px;padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:inherit;line-height:1.45;resize:vertical;outline:none}
+.booth-page textarea:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(49,90,232,.1)}
+#paymentForm>label:has(#auditNote){padding-top:3px}.booth-page #auditNote{background:#fbfdff}
+#generateCodeButton{min-height:54px;font-size:15px;letter-spacing:.01em}
+.code-card{border-top:4px solid var(--purple);padding:24px!important}.code-empty{color:var(--muted);line-height:1.55}.code-card #generatedCode{font-size:clamp(42px,5vw,68px);letter-spacing:.14em;white-space:nowrap;font-variant-numeric:tabular-nums}
+.booth-recent-panel{margin-top:2px}.booth-audit-table td{color:#2a3558}.booth-audit-table th{background:#f8fbff;position:sticky;top:0;z-index:1}
+
+/* Differentiate primary/secondary booth actions more clearly. */
+.booth-page .button.primary{background:linear-gradient(105deg,#315ae8,#6354d8)}
+.booth-page .button.secondary{background:#fff;color:#182664;border-color:#aebfda;box-shadow:none}
+.booth-page .text-button{color:#536483;font-size:13px}
+
+/* TV podium: true stepped hierarchy and full names. */
+.tv-podium{width:min(1380px,calc(100vw - 96px));margin-inline:auto;grid-template-columns:minmax(0,1fr) minmax(0,1.08fr) minmax(0,1fr);gap:16px!important;align-items:end!important}
+.tv-podium-card{height:auto!important;min-width:0!important;padding:20px 22px!important;grid-template-columns:42px 64px minmax(0,1fr)!important;gap:14px!important;align-items:center!important;overflow:visible!important}
+.tv-podium-card.first{min-height:300px!important;background:linear-gradient(150deg,#fffdf3,#fff8d9)!important;border-color:#e4bd32!important;box-shadow:0 18px 42px rgba(178,137,20,.14)!important}
+.tv-podium-card.second{min-height:258px!important;background:#fff!important}
+.tv-podium-card.third{min-height:230px!important;background:#fff!important}
+.tv-podium-card h2{display:block!important;overflow:visible!important;text-overflow:clip!important;white-space:normal!important;-webkit-line-clamp:unset!important;font-size:clamp(24px,2.15vw,40px)!important;line-height:1.04!important;overflow-wrap:break-word!important}
+.tv-podium-card .tv-podium-copy{overflow:visible!important}.tv-podium-card .avatar{width:64px!important;height:64px!important}.tv-rank-number{font-size:42px!important}.tv-podium-card strong{font-size:clamp(42px,4vw,64px)!important}
+.player-card-message{max-width:100%;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important;white-space:normal!important}
+
+/* Participant leaderboard: cleaner compact cards, readable message hierarchy. */
+.leaderboard-panel .podium-item{min-height:184px!important;padding:14px 11px!important;background:#f9fbff!important}
+.leaderboard-panel .podium-item strong{display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important;font-size:13px!important;line-height:1.15!important}
+.leaderboard-panel .podium-item small{font-size:10px!important}.leaderboard-panel .podium-item>span{font-size:25px!important}
+.leaderboard-panel .podium-message{margin-top:8px!important;padding-top:7px!important;font-size:10px!important;-webkit-line-clamp:2!important;min-height:33px}
+.leaderboard-panel .score-row{min-height:78px!important;padding:10px 9px!important;background:#fff!important}
+.score-player-copy>strong{display:block!important;-webkit-line-clamp:unset!important;overflow:visible!important;white-space:normal!important}.score-message{white-space:normal!important;display:-webkit-box!important;-webkit-line-clamp:2!important;-webkit-box-orient:vertical!important;overflow:hidden!important}
+
+/* Admin polish. */
+.fr-admin-shell{width:min(1280px,calc(100% - 44px));padding-top:34px}
+.fr-admin-header{margin-bottom:20px}.fr-admin-header h1{font-size:clamp(36px,4vw,58px);letter-spacing:-.05em}
+.fr-admin-auth{max-width:520px;padding:26px;border-radius:12px}
+.fr-admin-auth h2{margin:0 0 18px;font-size:24px}.admin-booth-overview{margin-top:4px}.fr-admin-toolbar{padding:20px!important;margin-top:14px}.fr-admin-list{display:grid;gap:10px}.fr-admin-entry,.payment-entry{padding:16px 18px!important}
+
+@media(max-width:980px){
+  .booth-main-grid{grid-template-columns:1fr!important}.proof-capture{grid-template-columns:1fr!important}.booth-price{justify-items:start}.tv-podium{width:calc(100vw - 40px);grid-template-columns:1fr}.tv-podium-card.first,.tv-podium-card.second,.tv-podium-card.third{min-height:150px!important}.tv-podium-card{grid-template-columns:38px 54px 1fr!important}.tv-podium-card h2{font-size:26px!important}
+}

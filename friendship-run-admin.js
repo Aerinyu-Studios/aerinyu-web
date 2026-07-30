@@ -35,18 +35,20 @@ function renderPayments(){
   document.querySelectorAll('[data-delete-payment]').forEach(b=>b.onclick=deletePayment);
 }
 function render(){renderPlayers();renderPayments()}
+function setText(selector,value){const el=$(selector);if(el)el.textContent=value;}
 function renderStats(){
   const money=v=>`MYR ${Number(v||0).toFixed(0)}`;
-  $('#adminBoothFunds').textContent=money(totals.booth_funds);
-  $('#adminCashFunds').textContent=money(totals.cash_funds);
-  $('#adminDigitalFunds').textContent=money(totals.digital_funds);
-  $('#adminRunSignups').textContent=totals.run_signup_attempts||0;
-  $('#adminFreeTrials').textContent=totals.free_trials||0;
-  $('#adminCodes').textContent=totals.total_records||0;
-  $('#adminCashCount').textContent=`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='cash').length} official attempts`;
-  $('#adminDigitalCount').textContent=`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='digital').length} official attempts`;
-  $('#adminCodesDetail').textContent=`${totals.unused_codes||0} unused · ${totals.redeemed_codes||0} redeemed`;
+  setText('#adminBoothFunds',money(totals.booth_funds));
+  setText('#adminCashFunds',money(totals.cash_funds));
+  setText('#adminDigitalFunds',money(totals.digital_funds));
+  setText('#adminRunSignups',totals.run_signup_attempts||0);
+  setText('#adminFreeTrials',totals.free_trials||0);
+  setText('#adminCodes',totals.total_records||0);
+  setText('#adminCashCount',`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='cash').length} official attempts`);
+  setText('#adminDigitalCount',`${payments.filter(p=>p.attempt_type==='official'&&p.eligibility_source==='booth_payment'&&p.payment_method==='digital').length} official attempts`);
+  setText('#adminCodesDetail',`${totals.unused_codes||0} unused · ${totals.redeemed_codes||0} redeemed`);
 }
+
 async function load(){const data=await api();entries=data.entries||[];payments=data.payments||[];totals=data.totals||{};renderStats();render()}
 async function editPlayer(e){const id=e.target.closest('[data-id]').dataset.id,entry=entries.find(x=>x.id===id);const name=prompt('Player name',entry.name);if(name===null)return;const student_id=prompt('Student ID',entry.student_id);if(student_id===null)return;const score=prompt('Score',String(entry.best_score??0));if(score===null)return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({name,student_id,best_score:Number(score),attempt_used:true})});await load()}
 async function resetPlayer(e){const id=e.target.closest('[data-id]').dataset.id;if(!confirm('Reset this attempt and score?'))return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({reset_attempt:true})});await load()}
@@ -55,5 +57,5 @@ async function regeneratePayment(e){const id=e.target.closest('[data-payment-id]
 async function togglePayment(e){const card=e.target.closest('[data-payment-id]'),p=payments.find(x=>x.id===card.dataset.paymentId);const status=p.status==='revoked'?'unused':'revoked';await api(`?type=payment&id=${p.id}`,{method:'PATCH',body:JSON.stringify({status})});await load()}
 async function deletePayment(e){const id=e.target.closest('[data-payment-id]').dataset.paymentId;if(!confirm('Permanently delete this payment record and proof image?'))return;await api(`?type=payment&id=${id}`,{method:'DELETE'});await load()}
 $('#adminAuthForm').addEventListener('submit',async e=>{e.preventDefault();adminKey=$('#adminKey').value;$('#adminAuthMessage').textContent='Checking...';try{await load();sessionStorage.setItem('friendship_run_admin_key',adminKey);$('#adminAuth').hidden=true;$('#adminPanel').hidden=false}catch(error){$('#adminAuthMessage').textContent=error.message}});
-$('#adminSearch').addEventListener('input',render);$('#adminRefresh').addEventListener('click',load);
+$('#adminSearch')?.addEventListener('input',render);$('#adminRefresh')?.addEventListener('click',load);
 if(adminKey)load().then(()=>{$('#adminAuth').hidden=true;$('#adminPanel').hidden=false}).catch(()=>sessionStorage.removeItem('friendship_run_admin_key'));

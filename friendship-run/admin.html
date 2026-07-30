@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=54" />
+  <link rel="stylesheet" href="/friendship-run.css?v=56" />
 </head>
 <body class="fr-admin-page">
   <main class="fr-admin-shell">
@@ -27,6 +27,15 @@
     </section>
 
     <section id="adminPanel" hidden>
+      <section class="admin-booth-overview" aria-label="Booth totals">
+        <article class="admin-stat-card primary-stat"><span>Funds collected</span><strong id="adminBoothFunds">MYR 0</strong><small>Official booth payments</small></article>
+        <article class="admin-stat-card"><span>Cash</span><strong id="adminCashFunds">MYR 0</strong><small id="adminCashCount">0 official attempts</small></article>
+        <article class="admin-stat-card"><span>Digital</span><strong id="adminDigitalFunds">MYR 0</strong><small id="adminDigitalCount">0 official attempts</small></article>
+        <article class="admin-stat-card"><span>Run signup</span><strong id="adminRunSignups">0</strong><small>Official plays waived at booth</small></article>
+        <article class="admin-stat-card"><span>Free trials</span><strong id="adminFreeTrials">0</strong><small>Practice codes issued</small></article>
+        <article class="admin-stat-card"><span>Codes</span><strong id="adminCodes">0</strong><small id="adminCodesDetail">0 unused · 0 redeemed</small></article>
+      </section>
+
       <div class="fr-admin-toolbar panel">
         <div><span class="section-label">ENTRIES</span><h2>Player attempts</h2></div>
         <div class="fr-admin-tools">
@@ -42,6 +51,6 @@
       <div id="adminPayments" class="fr-admin-list payment-list"></div>
     </section>
   </main>
-  <script src="/friendship-run-admin.js?v=54"></script>
+  <script src="/friendship-run-admin.js?v=56"></script>
 </body>
 </html>
