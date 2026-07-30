@@ -10,7 +10,7 @@ export default function handler(req, res) {
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
-    return json(res, 405, { error: 'Method not allowed.' });
+    return json(res, 405, { error: `Method ${req.method || 'UNKNOWN'} not allowed. Use POST.` });
   }
 
   try {
