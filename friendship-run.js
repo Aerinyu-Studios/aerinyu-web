@@ -6,6 +6,7 @@ const ctx = canvas.getContext('2d');
 let accessToken = sessionStorage.getItem('friendship_run_access') || '';
 let attemptToken = '';
 let player = null;
+let currentAttemptType = 'official';
 let capturedPhotoData = null;
 let cameraStream = null;
 let snake = [];
@@ -194,8 +195,13 @@ $('#registrationForm').addEventListener('submit', async (event) => {
     });
     player = data.player;
     attemptToken = data.attempt_token;
+    currentAttemptType = data.attempt_type || 'official';
     $('#currentPlayer').textContent = player.name;
     $('#bestValue').textContent = String(data.top_score || 0).padStart(3,'0');
+    const noticeTitle = document.querySelector('#attemptNoticeTitle');
+    const noticeText = document.querySelector('#attemptNoticeText');
+    if (noticeTitle) noticeTitle.textContent = currentAttemptType === 'trial' ? 'Free trial' : 'Official attempt';
+    if (noticeText) noticeText.textContent = currentAttemptType === 'trial' ? 'Practice round only. This score will not enter the leaderboard.' : 'Leaving or refreshing during play forfeits this attempt.';
     message.textContent = '';
     resetGame();
     showScreen('game');
@@ -308,8 +314,13 @@ async function endGame(){
   try{
     const data=await request('score',{method:'POST',body:JSON.stringify({attempt_token:attemptToken,score,duration_ms:Date.now()-startedAt})});
     $('#finalScore').textContent=score;
-    $('#resultHeadline').textContent=data.rank?`You placed #${data.rank}`:'Score submitted';
-    $('#resultMessage').textContent='Your score has been added to the live Friendship Run leaderboard.';
+    if (data.trial) {
+      $('#resultHeadline').textContent='Free trial complete';
+      $('#resultMessage').textContent='Nice run. This practice score is not on the leaderboard — return to the booth for your official-attempt code.';
+    } else {
+      $('#resultHeadline').textContent=data.rank?`You placed #${data.rank}`:'Score submitted';
+      $('#resultMessage').textContent='Your score has been added to the live Friendship Run leaderboard.';
+    }
   }catch(error){
     $('#finalScore').textContent=score;$('#resultHeadline').textContent='Score not submitted';$('#resultMessage').textContent=error.message;
   }
@@ -362,7 +373,7 @@ $('#refreshLeaderboard').addEventListener('click',loadLeaderboard);
 $('#newPlayerButton').addEventListener('click',async()=>{
   $('#registrationForm').reset();
   $('#registrationMessage').textContent='';
-  player=null;attemptToken='';
+  player=null;attemptToken='';currentAttemptType='official';
   capturedPhotoData=null;
   $('#capturedPhoto').src='';
   $('#capturedPhoto').hidden=true;

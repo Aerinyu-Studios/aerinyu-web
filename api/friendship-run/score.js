@@ -19,17 +19,36 @@ export default async function handler(req,res){
     const supabase=getSupabase();
     const {data:player,error:readError}=await supabase.from('friendship_run_players').select('*').eq('id',attempt.player_id).single();
     if(readError||!player) return json(res,404,{error:'Player entry not found.'});
-    if(player.current_attempt_nonce!==attempt.nonce) return json(res,409,{error:'A newer paid attempt has already been registered for this student ID.'});
-    if(player.attempt_used) return json(res,409,{error:'This attempt has already been submitted.'});
+    if(player.current_attempt_nonce!==attempt.nonce) return json(res,409,{error:'A newer attempt has already been registered for this student ID.'});
+    if(player.current_attempt_completed) return json(res,409,{error:'This attempt has already been submitted.'});
+
+    const finishedAt=new Date().toISOString();
+    const common={
+      current_attempt_completed:true,
+      attempt_finished_at:finishedAt,
+      duration_ms:Math.round(duration),
+      updated_at:finishedAt
+    };
+
+    if(attempt.attempt_type==='trial'){
+      const update=await supabase.from('friendship_run_players').update(common)
+        .eq('id',player.id).eq('current_attempt_nonce',attempt.nonce).eq('current_attempt_completed',false).select().single();
+      if(update.error) throw update.error;
+
+      if(attempt.payment_id){
+        const paymentUpdate=await supabase.from('friendship_run_payments').update({score,duration_ms:Math.round(duration),completed_at:finishedAt}).eq('id',attempt.payment_id);
+        if(paymentUpdate.error) throw paymentUpdate.error;
+      }
+      await supabase.from('friendship_run_audit_log').insert({
+        event_type:'trial_completed',payment_id:attempt.payment_id,player_id:player.id,student_id_normalized:player.student_id_normalized,
+        metadata:{score,duration_ms:Math.round(duration)}
+      });
+      return json(res,200,{ok:true,trial:true,rank:null});
+    }
 
     const update=await supabase.from('friendship_run_players').update({
-      score,
-      best_score:score,
-      attempt_used:true,
-      attempt_finished_at:new Date().toISOString(),
-      duration_ms:Math.round(duration),
-      updated_at:new Date().toISOString()
-    }).eq('id',player.id).eq('attempt_used',false).eq('current_attempt_nonce',attempt.nonce).select().single();
+      ...common,score,best_score:score,attempt_used:true
+    }).eq('id',player.id).eq('current_attempt_nonce',attempt.nonce).eq('current_attempt_completed',false).select().single();
     if(update.error) throw update.error;
 
     const {count,error:rankError}=await supabase
@@ -40,11 +59,16 @@ export default async function handler(req,res){
     if(rankError) throw rankError;
 
     if(attempt.payment_id){
-      const paymentUpdate=await supabase.from('friendship_run_payments').update({score,duration_ms:Math.round(duration),completed_at:new Date().toISOString()}).eq('id',attempt.payment_id);
+      const paymentUpdate=await supabase.from('friendship_run_payments').update({score,duration_ms:Math.round(duration),completed_at:finishedAt}).eq('id',attempt.payment_id);
       if(paymentUpdate.error) throw paymentUpdate.error;
     }
 
-    return json(res,200,{ok:true,rank:(count||0)+1});
+    await supabase.from('friendship_run_audit_log').insert({
+      event_type:'official_attempt_completed',payment_id:attempt.payment_id,player_id:player.id,student_id_normalized:player.student_id_normalized,
+      metadata:{score,duration_ms:Math.round(duration),rank:(count||0)+1}
+    });
+
+    return json(res,200,{ok:true,trial:false,rank:(count||0)+1});
   }catch(error){
     console.error('Friendship Run score error:',error);
     return json(res,500,{error:friendlyDatabaseError(error)});

@@ -8,81 +8,133 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=42" />
+  <link rel="stylesheet" href="/friendship-run.css?v=41" />
 </head>
 <body class="booth-page">
   <main class="booth-shell">
     <header class="booth-header">
       <div>
         <p class="section-label">SUNWAY PRE-U FRIENDSHIP RUN</p>
-        <h1>Booth payment confirmation</h1>
-        <p>Record each MYR 3 payment and issue a one-time six-digit play code.</p>
+        <h1>Snake Challenge booth</h1>
+        <p>Issue free-trial and official-attempt codes while keeping every transaction auditable.</p>
       </div>
-      <div class="booth-price"><strong>MYR 3</strong><span>PER PLAY</span></div>
+      <div class="booth-price"><strong>MYR 3</strong><span>OFFICIAL BOOTH PLAY</span></div>
     </header>
 
     <section class="panel booth-auth" id="boothAuth">
-      <span class="section-label">PRIVATE STAFF PAGE</span>
-      <h2>Unlock booth controls</h2>
+      <span class="section-label">STAFF SIGN IN</span>
+      <h2>Open booth controls</h2>
       <form id="boothAuthForm" class="form-stack">
-        <label><span>Booth key</span><input id="boothKey" type="password" required /></label>
-        <button class="button primary" type="submit">Continue</button>
+        <label><span>Username</span><input id="boothUsername" autocomplete="username" required /></label>
+        <label><span>Password</span><input id="boothPassword" type="password" autocomplete="current-password" required /></label>
+        <button class="button primary" type="submit">Sign in</button>
         <p id="boothAuthMessage" class="message"></p>
       </form>
     </section>
 
-    <section class="booth-workspace" id="boothWorkspace" hidden>
-      <section class="panel booth-form-card">
-        <div>
-          <span class="section-label">NEW PAYMENT</span>
-          <h2>Issue play code</h2>
-          <p>Enter the student ID and take a clear photo of the payment proof.</p>
-        </div>
-        <form id="paymentForm" class="form-stack">
-          <label><span>Student ID</span><input id="paymentStudentId" autocomplete="off" maxlength="40" required /></label>
+    <section class="booth-dashboard" id="boothWorkspace" hidden>
+      <div class="booth-session-bar panel">
+        <div><span class="section-label">SIGNED IN</span><strong id="operatorName">Staff member</strong></div>
+        <button id="boothLogout" class="text-button" type="button">Sign out</button>
+      </div>
 
-          <div class="proof-capture">
-            <div class="proof-preview" id="proofPreview">
-              <div id="proofPlaceholder"><strong>No payment proof yet</strong><span>Take a clear photo before submitting.</span></div>
-              <img id="proofImage" alt="Payment proof" hidden />
-            </div>
-            <div class="proof-actions">
-              <button class="button secondary" id="openProofCamera" type="button">Take payment proof photo</button>
-              <button class="text-button" id="removeProof" type="button" hidden>Remove photo</button>
-            </div>
-          </div>
-
-          <button class="button primary" type="submit">Generate play code</button>
-          <p id="paymentMessage" class="message"></p>
-        </form>
+      <section class="booth-stats" aria-label="Booth audit totals">
+        <article class="booth-stat panel"><span>Funds collected</span><strong id="fundsTotal">MYR 0</strong><small>Booth payments only</small></article>
+        <article class="booth-stat panel"><span>Cash</span><strong id="cashTotal">MYR 0</strong><small id="cashCount">0 payments</small></article>
+        <article class="booth-stat panel"><span>Digital</span><strong id="digitalTotal">MYR 0</strong><small id="digitalCount">0 payments</small></article>
+        <article class="booth-stat panel"><span>Run signups</span><strong id="runSignupCount">0</strong><small>Official attempts</small></article>
+        <article class="booth-stat panel"><span>Free trials</span><strong id="trialCount">0</strong><small>One per student</small></article>
       </section>
 
-      <aside class="panel code-card" id="codeCard">
-        <span class="section-label">PLAY CODE</span>
-        <div class="code-empty" id="codeEmpty">The generated code will appear here.</div>
-        <div id="codeResult" hidden>
-          <p id="codeStudent"></p>
-          <strong id="generatedCode">000000</strong>
-          <span>Valid for 30 minutes and usable once.</span>
-          <button class="button secondary" id="copyCode" type="button">Copy code</button>
-          <button class="button primary" id="nextPayment" type="button">Record next payment</button>
+      <div class="booth-main-grid">
+        <section class="panel booth-form-card">
+          <div class="booth-form-heading">
+            <div><span class="section-label">ISSUE A CODE</span><h2>New player access</h2></div>
+            <p>Choose the attempt type first. The form will only ask for the evidence that is actually needed.</p>
+          </div>
+
+          <form id="paymentForm" class="form-stack">
+            <label><span>Student ID</span><input id="paymentStudentId" autocomplete="off" maxlength="40" required /></label>
+
+            <fieldset class="choice-group">
+              <legend>Attempt type</legend>
+              <label class="choice-card"><input type="radio" name="attemptType" value="trial" checked /><span><strong>Free trial</strong><small>One practice round. Score does not enter the leaderboard.</small></span></label>
+              <label class="choice-card"><input type="radio" name="attemptType" value="official" /><span><strong>Official attempt</strong><small>Score replaces the player's current leaderboard result.</small></span></label>
+            </fieldset>
+
+            <fieldset class="choice-group" id="officialSourceGroup" hidden>
+              <legend>How is this official attempt covered?</legend>
+              <label class="choice-card"><input type="radio" name="eligibilitySource" value="booth_payment" checked /><span><strong>Paid at this booth</strong><small>MYR 3 collected here.</small></span></label>
+              <label class="choice-card"><input type="radio" name="eligibilitySource" value="run_signup" /><span><strong>Friendship Run signup</strong><small>No booth charge. Verify their run registration.</small></span></label>
+            </fieldset>
+
+            <fieldset class="choice-group compact-choice" id="paymentMethodGroup" hidden>
+              <legend>Payment method</legend>
+              <label class="choice-card"><input type="radio" name="paymentMethod" value="cash" checked /><span><strong>Cash</strong><small>MYR 3</small></span></label>
+              <label class="choice-card"><input type="radio" name="paymentMethod" value="digital" /><span><strong>Digital payment</strong><small>MYR 3</small></span></label>
+            </fieldset>
+
+            <div class="proof-capture" id="proofSection" hidden>
+              <div class="proof-copy">
+                <span class="section-label" id="proofLabel">EVIDENCE PHOTO</span>
+                <h3 id="proofTitle">Take a clear photo</h3>
+                <p id="proofHelp">The photo is retained with the transaction record.</p>
+              </div>
+              <div class="proof-preview" id="proofPreview">
+                <div id="proofPlaceholder"><strong>No evidence photo yet</strong><span>Required for official attempts.</span></div>
+                <img id="proofImage" alt="Transaction evidence" hidden />
+              </div>
+              <div class="proof-actions">
+                <button class="button secondary" id="openProofCamera" type="button">Open camera</button>
+                <button class="text-button" id="removeProof" type="button" hidden>Remove photo</button>
+              </div>
+            </div>
+
+            <label><span>Staff note <small>(optional)</small></span><textarea id="auditNote" maxlength="240" rows="3" placeholder="Anything useful for later auditing"></textarea></label>
+
+            <button class="button primary" id="generateCodeButton" type="submit">Generate free-trial code</button>
+            <p id="paymentMessage" class="message"></p>
+          </form>
+        </section>
+
+        <aside class="panel code-card" id="codeCard">
+          <span class="section-label">PLAY CODE</span>
+          <div class="code-empty" id="codeEmpty">Complete the form to generate a six-digit code.</div>
+          <div id="codeResult" hidden>
+            <span class="code-type" id="codeType">FREE TRIAL</span>
+            <p id="codeStudent"></p>
+            <strong id="generatedCode">000000</strong>
+            <span id="codeDescription">Valid for 30 minutes and usable once.</span>
+            <button class="button secondary" id="copyCode" type="button">Copy code</button>
+            <button class="button primary" id="nextPayment" type="button">Next player</button>
+          </div>
+        </aside>
+      </div>
+
+      <section class="panel booth-recent-panel">
+        <div class="panel-heading"><div><span class="section-label">AUDIT TRAIL</span><h2>Recent booth activity</h2></div><button class="text-button" id="refreshAudit" type="button">Refresh</button></div>
+        <div class="booth-audit-table-wrap">
+          <table class="booth-audit-table">
+            <thead><tr><th>Time</th><th>Student</th><th>Type</th><th>Method</th><th>Amount</th><th>Staff</th><th>Status</th></tr></thead>
+            <tbody id="auditRows"><tr><td colspan="7">Loading…</td></tr></tbody>
+          </table>
         </div>
-      </aside>
+      </section>
     </section>
   </main>
 
   <dialog id="proofCameraDialog" class="camera-dialog">
     <div class="camera-dialog-head">
-      <div><span class="section-label">PAYMENT PROOF</span><h2>Take a photo</h2></div>
+      <div><span class="section-label">TRANSACTION EVIDENCE</span><h2 id="cameraDialogTitle">Take a photo</h2></div>
       <button id="closeProofCamera" class="dialog-close" type="button" aria-label="Close camera">×</button>
     </div>
     <div class="camera-stage"><video id="proofVideo" autoplay playsinline muted></video></div>
     <div class="camera-dialog-actions">
-      <button id="captureProof" class="button primary" type="button">Capture proof</button>
+      <button id="captureProof" class="button primary" type="button">Capture photo</button>
       <p id="proofCameraMessage" class="message"></p>
     </div>
   </dialog>
   <canvas id="proofCanvas" width="1280" height="960" hidden></canvas>
-  <script src="/friendship-run-booth.js?v=30"></script>
+  <script src="/friendship-run-booth.js?v=41"></script>
 </body>
 </html>

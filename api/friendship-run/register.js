@@ -52,19 +52,21 @@ export default async function handler(req,res){
 
     const nonce=crypto.randomUUID();
     const attemptStartedAt=new Date().toISOString();
-    const payload={
+    const attemptType=payment.attempt_type === 'trial' ? 'trial' : 'official';
+    const common={
       name,programme,message:playerMessage,student_id:studentId,student_id_normalized:normalized,photo_url:photoUrl,
-      payment_confirmed:true,score:null,best_score:0,duration_ms:null,attempt_used:false,
-      attempt_started_at:attemptStartedAt,attempt_finished_at:null,current_attempt_nonce:nonce,
-      current_payment_id:payment.id,updated_at:new Date().toISOString()
+      payment_confirmed:true,attempt_started_at:attemptStartedAt,attempt_finished_at:null,current_attempt_nonce:nonce,
+      current_payment_id:payment.id,current_attempt_kind:attemptType,current_attempt_completed:false,updated_at:new Date().toISOString()
     };
 
     let player;
     if(existing){
-      const updated=await supabase.from('friendship_run_players').update(payload).eq('id',existing.id).select().single();
+      const updated=await supabase.from('friendship_run_players').update(common).eq('id',existing.id).select().single();
       if(updated.error) throw updated.error; player=updated.data;
     }else{
-      const inserted=await supabase.from('friendship_run_players').insert(payload).select().single();
+      const inserted=await supabase.from('friendship_run_players').insert({
+        ...common,score:null,best_score:0,duration_ms:null,attempt_used:false
+      }).select().single();
       if(inserted.error) throw inserted.error; player=inserted.data;
     }
 
@@ -73,11 +75,23 @@ export default async function handler(req,res){
     }).eq('id',payment.id).eq('status','unused').select().single();
     if(redeemed.error) throw redeemed.error;
 
+    await supabase.from('friendship_run_audit_log').insert({
+      event_type:'code_redeemed',payment_id:payment.id,player_id:player.id,student_id_normalized:normalized,
+      operator_username:payment.operator_username,operator_name:payment.operator_name,
+      metadata:{attempt_type:attemptType,eligibility_source:payment.eligibility_source,payment_method:payment.payment_method}
+    });
+
     const top=await supabase.from('friendship_run_players').select('best_score').eq('attempt_used',true).order('best_score',{ascending:false}).limit(1).maybeSingle();
     if(top.error) throw top.error;
 
-    const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,payment_id:payment.id,nonce,started_at:Date.now()},60*30);
-    return json(res,200,{player:{id:player.id,name:player.name,programme:player.programme,message:player.message,photo_url:player.photo_url},top_score:top.data?.best_score||0,attempt_token:attemptToken});
+    const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,payment_id:payment.id,nonce,attempt_type:attemptType,started_at:Date.now()},60*30);
+    return json(res,200,{
+      player:{id:player.id,name:player.name,programme:player.programme,message:player.message,photo_url:player.photo_url},
+      top_score:top.data?.best_score||0,
+      attempt_type:attemptType,
+      eligibility_source:payment.eligibility_source,
+      attempt_token:attemptToken
+    });
   }catch(error){
     console.error('Friendship Run registration error:',error);
     return json(res,500,{error:friendlyDatabaseError(error)});
