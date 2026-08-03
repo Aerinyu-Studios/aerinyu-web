@@ -8,12 +8,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=56" />
+  <link rel="stylesheet" href="/friendship-run.css?v=60" />
 </head>
 <body class="fr-admin-page">
   <main class="fr-admin-shell">
     <header class="fr-admin-header">
       <div><p class="section-label">PRIVATE EVENT CONTROL</p><h1>Friendship Run Admin</h1></div>
+      <a href="/friendship-run/leaderboard" target="_blank" class="button secondary">Open TV display</a>
     </header>
 
     <section class="panel fr-admin-auth" id="adminAuth">
@@ -35,6 +36,54 @@
         <article class="admin-stat-card"><span>Codes</span><strong id="adminCodes">0</strong><small id="adminCodesDetail">0 unused · 0 redeemed</small></article>
       </section>
 
+
+      <section class="panel admin-display-control" aria-label="TV display control">
+        <div class="admin-display-heading">
+          <div><span class="section-label">TV DISPLAY</span><h2>Scene and announcement control</h2><p>Choose what the event screen shows. Changes appear automatically on the TV display.</p></div>
+          <span class="admin-live-chip"><i></i> Live control</span>
+        </div>
+
+        <form id="displaySettingsForm" class="admin-display-form">
+          <label class="display-mode-field"><span>Display mode</span>
+            <select id="displayMode">
+              <option value="cycle">Automatic cycle</option>
+              <option value="logo">Logo only</option>
+              <option value="leaderboard">Leaderboard only</option>
+              <option value="map">Route map only</option>
+              <option value="announcement">Announcements only</option>
+            </select>
+          </label>
+          <div class="display-duration-grid">
+            <label><span>Logo seconds</span><input id="logoDuration" type="number" min="1" max="120" step="1"></label>
+            <label><span>Leaderboard seconds</span><input id="leaderboardDuration" type="number" min="1" max="120" step="1"></label>
+            <label><span>Map seconds</span><input id="mapDuration" type="number" min="1" max="120" step="1"></label>
+            <label><span>Default message seconds</span><input id="announcementDuration" type="number" min="1" max="120" step="1"></label>
+          </div>
+          <div class="admin-display-actions"><button class="button primary" type="submit">Apply TV settings</button><p class="message" id="displaySettingsMessage"></p></div>
+        </form>
+
+        <div class="announcement-admin-grid">
+          <form id="announcementForm" class="announcement-editor">
+            <input id="announcementId" type="hidden">
+            <div class="announcement-editor-head"><div><span class="section-label">MESSAGE</span><h3 id="announcementFormTitle">Add announcement</h3></div><button id="announcementReset" class="button ghost" type="button">New message</button></div>
+            <label><span>Small heading</span><input id="announcementEyebrow" maxlength="50" value="EVENT UPDATE" required></label>
+            <label><span>Title</span><input id="announcementTitle" maxlength="100" placeholder="Hydration station update" required></label>
+            <label><span>Message</span><textarea id="announcementBody" maxlength="500" rows="5" placeholder="Enter the announcement shown on the TV display." required></textarea></label>
+            <div class="announcement-editor-row">
+              <label><span>Order</span><input id="announcementOrder" type="number" value="0" step="1"></label>
+              <label><span>Seconds (optional)</span><input id="announcementSeconds" type="number" min="1" max="120" step="1" placeholder="Default"></label>
+            </div>
+            <label class="admin-check"><input id="announcementActive" type="checkbox" checked><span>Show this announcement</span></label>
+            <button class="button primary" type="submit">Save announcement</button>
+            <p class="message" id="announcementMessage"></p>
+          </form>
+          <div class="announcement-library">
+            <div class="announcement-library-head"><div><span class="section-label">ACTIVE MESSAGES</span><h3>Announcement library</h3></div><span id="announcementCount" class="count-chip">0</span></div>
+            <div id="adminAnnouncements" class="admin-announcement-list"></div>
+          </div>
+        </div>
+      </section>
+
       <div class="fr-admin-toolbar panel">
         <div><span class="section-label">ENTRIES</span><h2>Player attempts</h2></div>
         <div class="fr-admin-tools">
@@ -50,6 +99,6 @@
       <div id="adminPayments" class="fr-admin-list payment-list"></div>
     </section>
   </main>
-  <script src="/friendship-run-admin.js?v=56"></script>
+  <script src="/friendship-run-admin.js?v=60"></script>
 </body>
 </html>

@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=59" />
+  <link rel="stylesheet" href="/friendship-run.css?v=60" />
 </head>
 <body class="tv-page tv-cycle-page">
   <section class="tv-gate is-active" id="tvGate">
@@ -70,13 +70,30 @@
       </div>
     </section>
 
+
+    <section class="tv-scene tv-announcement-scene" data-scene="announcement" aria-label="Event announcement">
+      <div class="tv-announcement-background" aria-hidden="true">
+        <span class="announcement-orb orb-one"></span>
+        <span class="announcement-orb orb-two"></span>
+        <span class="announcement-line line-one"></span>
+        <span class="announcement-line line-two"></span>
+      </div>
+      <article class="tv-announcement-card">
+        <div class="tv-announcement-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <p id="tvAnnouncementEyebrow" class="tv-announcement-eyebrow">EVENT UPDATE</p>
+        <h1 id="tvAnnouncementTitle">Friendship Run Update</h1>
+        <p id="tvAnnouncementBody" class="tv-announcement-body">Important event information will appear here.</p>
+        <footer><span>SUNWAY PRE-U FRIENDSHIP RUN</span><span>15 AUGUST 2026</span></footer>
+      </article>
+    </section>
+
     <section class="tv-scene tv-map-scene" data-scene="map" aria-label="Friendship Run route map">
       <header class="tv-map-header">
         <div><span>GET READY FOR RACE DAY</span><h1>Friendship Run Route</h1></div>
         <p>Hydration and first-aid stations are marked along the route.</p>
       </header>
       <div class="tv-map-frame">
-        <img src="/assets/friendship-run-route-map.jpeg" alt="Sunway Pre-U Friendship Run 2026 route map" />
+        <img src="/assets/friendship-run-route-map.png" alt="Sunway Pre-U Friendship Run 2026 route map" />
       </div>
       <footer class="tv-map-footer"><span>15 AUGUST 2026</span><span>08:00 AM · SUNWAY COLLEGE</span></footer>
     </section>
@@ -84,7 +101,6 @@
     <div class="tv-scene-progress" aria-hidden="true"><span id="sceneProgress"></span></div>
   </main>
 
-  <script src="/friendship-run-leaderboard.js?v=59"></script>
+  <script src="/friendship-run-leaderboard.js?v=60"></script>
 </body>
 </html>
-

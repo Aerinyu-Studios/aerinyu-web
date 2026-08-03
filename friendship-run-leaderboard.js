@@ -1,24 +1,27 @@
 const $ = (selector) => document.querySelector(selector);
 let accessToken = localStorage.getItem('friendship_run_tv_access') || sessionStorage.getItem('friendship_run_access') || '';
 let refreshTimer = null;
+let configTimer = null;
 let sceneTimer = null;
 let progressAnimation = null;
 let hasStartedCycle = false;
-
-const SCENE_DURATIONS = {
-  logo: 3200,
-  leaderboard: 12000,
-  map: 9000
+let displayConfig = {
+  settings: {
+    display_mode: 'cycle',
+    logo_duration_ms: 3200,
+    leaderboard_duration_ms: 12000,
+    map_duration_ms: 9000,
+    announcement_duration_ms: 9000
+  },
+  announcements: []
 };
-
-// Initial logo, then leaderboard, map, logo, and repeat.
-const SCENE_SEQUENCE = ['logo', 'leaderboard', 'map', 'logo', 'leaderboard', 'map'];
+let sceneSequence = ['logo', 'leaderboard', 'map'];
 let sceneIndex = 0;
-
+let currentSceneKey = '';
 
 function initLogoFallback(){
-  const logo = document.querySelector('#tvEventLogo');
-  const fallback = document.querySelector('#tvLogoFallback');
+  const logo = $('#tvEventLogo');
+  const fallback = $('#tvLogoFallback');
   if(!logo || !fallback) return;
   const revealFallback = ()=>{
     logo.classList.add('is-unavailable');
@@ -51,12 +54,12 @@ function showBoard(){
   $('#tvBoard').hidden=false;
   if(!hasStartedCycle){
     hasStartedCycle=true;
-    sceneIndex=0;
-    showScene(SCENE_SEQUENCE[sceneIndex]);
+    rebuildSceneSequence(true);
   }
 }
 function showGate(message=''){
   clearInterval(refreshTimer);
+  clearInterval(configTimer);
   clearTimeout(sceneTimer);
   progressAnimation?.cancel();
   hasStartedCycle=false;
@@ -76,8 +79,8 @@ $('#tvAccessForm').addEventListener('submit',async(event)=>{
     accessToken=data.token;
     localStorage.setItem('friendship_run_tv_access',accessToken);
     form.reset();
-    const loaded = await loadLeaderboard();
-    if (!loaded) return;
+    const loaded = await Promise.all([loadLeaderboard(), loadDisplayConfig()]);
+    if (!loaded[0] || !loaded[1]) return;
     showBoard();
     startAutoRefresh();
   }catch(error){$('#tvAccessMessage').textContent=error.message}
@@ -110,42 +113,108 @@ async function loadLeaderboard(){
   }
 }
 
-function showScene(name){
+function createSequence(){
+  const mode=displayConfig.settings?.display_mode||'cycle';
+  const active=(displayConfig.announcements||[]).filter(item=>item.is_active!==false);
+  if(mode==='logo') return ['logo'];
+  if(mode==='leaderboard') return ['leaderboard'];
+  if(mode==='map') return ['map'];
+  if(mode==='announcement') return active.length?active.map(item=>`announcement:${item.id}`):['logo'];
+  return ['logo','leaderboard',...active.map(item=>`announcement:${item.id}`),'map'];
+}
+
+function rebuildSceneSequence(force=false){
+  const next=createSequence();
+  const changed=JSON.stringify(next)!==JSON.stringify(sceneSequence);
+  sceneSequence=next.length?next:['logo'];
+  if(force||changed||!sceneSequence.includes(currentSceneKey)){
+    sceneIndex=0;
+    showScene(sceneSequence[0]);
+  }
+}
+
+async function loadDisplayConfig(){
+  try{
+    const data=await api('display-config');
+    displayConfig={settings:data.settings||displayConfig.settings,announcements:data.announcements||[]};
+    if(hasStartedCycle) rebuildSceneSequence(false);
+    return true;
+  }catch(error){
+    if(error.status===401){
+      localStorage.removeItem('friendship_run_tv_access');
+      accessToken='';
+      showGate('Session expired. Enter the event password again.');
+      return false;
+    }
+    return true;
+  }
+}
+
+function renderAnnouncement(item){
+  $('#tvAnnouncementEyebrow').textContent=item?.eyebrow||'EVENT UPDATE';
+  $('#tvAnnouncementTitle').textContent=item?.title||'Friendship Run Update';
+  $('#tvAnnouncementBody').textContent=item?.body||'Important event information will appear here.';
+  const card=document.querySelector('.tv-announcement-card');
+  card?.classList.remove('is-entering');
+  requestAnimationFrame(()=>card?.classList.add('is-entering'));
+}
+
+function sceneDuration(key){
+  const settings=displayConfig.settings||{};
+  if(key==='logo') return Number(settings.logo_duration_ms)||3200;
+  if(key==='leaderboard') return Number(settings.leaderboard_duration_ms)||12000;
+  if(key==='map') return Number(settings.map_duration_ms)||9000;
+  if(key.startsWith('announcement:')){
+    const id=key.split(':')[1];
+    const item=(displayConfig.announcements||[]).find(row=>row.id===id);
+    return Number(item?.duration_ms)||Number(settings.announcement_duration_ms)||9000;
+  }
+  return 6000;
+}
+
+function showScene(key){
   clearTimeout(sceneTimer);
   progressAnimation?.cancel();
+  currentSceneKey=key;
+  const baseName=key.startsWith('announcement:')?'announcement':key;
+
+  if(baseName==='announcement'){
+    const id=key.split(':')[1];
+    renderAnnouncement((displayConfig.announcements||[]).find(item=>item.id===id));
+  }
 
   document.querySelectorAll('.tv-scene').forEach(scene=>{
-    const active=scene.dataset.scene===name;
+    const active=scene.dataset.scene===baseName;
     scene.classList.toggle('is-visible',active);
     scene.setAttribute('aria-hidden',String(!active));
   });
 
-  const duration=SCENE_DURATIONS[name] || 6000;
+  const duration=sceneDuration(key);
   const bar=$('#sceneProgress');
   if(bar){
     bar.style.transform='scaleX(0)';
-    progressAnimation=bar.animate(
-      [{transform:'scaleX(0)'},{transform:'scaleX(1)'}],
-      {duration,easing:'linear',fill:'forwards'}
-    );
+    progressAnimation=bar.animate([{transform:'scaleX(0)'},{transform:'scaleX(1)'}],{duration,easing:'linear',fill:'forwards'});
   }
 
+  if(sceneSequence.length===1) return;
   sceneTimer=setTimeout(()=>{
-    sceneIndex=(sceneIndex+1)%SCENE_SEQUENCE.length;
-    showScene(SCENE_SEQUENCE[sceneIndex]);
+    sceneIndex=(sceneIndex+1)%sceneSequence.length;
+    showScene(sceneSequence[sceneIndex]);
   },duration);
 }
 
 function startAutoRefresh(){
   clearInterval(refreshTimer);
+  clearInterval(configTimer);
   refreshTimer=setInterval(loadLeaderboard,5000);
+  configTimer=setInterval(loadDisplayConfig,5000);
 }
 
 async function init(){
   initLogoFallback();
   if(!accessToken) return showGate();
-  const loaded = await loadLeaderboard();
-  if (!loaded) return;
+  const [leaderboardLoaded, configLoaded] = await Promise.all([loadLeaderboard(), loadDisplayConfig()]);
+  if (!leaderboardLoaded || !configLoaded) return;
   showBoard();
   startAutoRefresh();
 }
