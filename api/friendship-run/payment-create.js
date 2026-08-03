@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { clean, friendlyDatabaseError, getSupabase, json, verify } from './_lib.js';
+import { clean, friendlyDatabaseError, getSupabase, json, verify } from '../../lib/friendship-run.js';
 
 function boothAccess(req) {
   const token = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');

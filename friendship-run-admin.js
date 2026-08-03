@@ -11,7 +11,7 @@ async function api(path='',options={}){
 }
 
 async function displayApi(path='',options={}){
-  const response=await fetch(`/api/friendship-run/display-admin${path}`,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),'x-admin-key':adminKey,...(options.headers||{})}});
+  const response=await fetch(`/api/friendship-run/admin${path}`,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),'x-admin-key':adminKey,...(options.headers||{})}});
   const body=await response.json().catch(()=>({}));
   if(!response.ok)throw new Error(body.error||'Display request failed.');
   return body;

@@ -1,4 +1,4 @@
-import { access, friendlyDatabaseError, getSupabase, json, verify } from './_lib.js';
+import { access, friendlyDatabaseError, getSupabase, json, verify } from '../../lib/friendship-run.js';
 
 export default async function handler(req,res){
   if(req.method!=='POST') return json(res,405,{error:'Method not allowed.'});

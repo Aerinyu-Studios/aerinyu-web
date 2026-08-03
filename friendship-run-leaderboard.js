@@ -135,7 +135,7 @@ function rebuildSceneSequence(force=false){
 
 async function loadDisplayConfig(){
   try{
-    const data=await api('display-config');
+    const data=await api('leaderboard?display=1');
     displayConfig={settings:data.settings||displayConfig.settings,announcements:data.announcements||[]};
     if(hasStartedCycle) rebuildSceneSequence(false);
     return true;

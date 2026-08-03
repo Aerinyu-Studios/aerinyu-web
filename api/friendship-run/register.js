@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { access, clean, friendlyDatabaseError, getSupabase, json, sign } from './_lib.js';
+import { access, clean, friendlyDatabaseError, getSupabase, json, sign } from '../../lib/friendship-run.js';
 
 export default async function handler(req,res){
   if(req.method!=='POST') return json(res,405,{error:'Method not allowed.'});

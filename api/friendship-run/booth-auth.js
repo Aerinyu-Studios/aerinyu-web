@@ -1,4 +1,4 @@
-import { json, safeEqual, sign } from './_lib.js';
+import { json, safeEqual, sign } from '../../lib/friendship-run.js';
 
 function loadUsers() {
   const raw = String(process.env.FRIENDSHIP_RUN_BOOTH_USERS || '').trim();

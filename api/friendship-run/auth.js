@@ -1,4 +1,4 @@
-import { json, safeEqual, sign } from './_lib.js';
+import { json, safeEqual, sign } from '../../lib/friendship-run.js';
 
 export default function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
