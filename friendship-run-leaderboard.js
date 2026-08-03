@@ -15,6 +15,20 @@ const SCENE_DURATIONS = {
 const SCENE_SEQUENCE = ['logo', 'leaderboard', 'map', 'logo', 'leaderboard', 'map'];
 let sceneIndex = 0;
 
+
+function initLogoFallback(){
+  const logo = document.querySelector('#tvEventLogo');
+  const fallback = document.querySelector('#tvLogoFallback');
+  if(!logo || !fallback) return;
+  const revealFallback = ()=>{
+    logo.classList.add('is-unavailable');
+    fallback.classList.add('is-visible');
+    fallback.setAttribute('aria-hidden','false');
+  };
+  logo.addEventListener('error', revealFallback, {once:true});
+  if(logo.complete && logo.naturalWidth === 0) revealFallback();
+}
+
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</div>`}
 function rankedEntries(entries=[]){return [...entries].sort((a,b)=>Number(b.score||0)-Number(a.score||0)||String(a.name||'').localeCompare(String(b.name||'')))}
@@ -128,6 +142,7 @@ function startAutoRefresh(){
 }
 
 async function init(){
+  initLogoFallback();
   if(!accessToken) return showGate();
   const loaded = await loadLeaderboard();
   if (!loaded) return;

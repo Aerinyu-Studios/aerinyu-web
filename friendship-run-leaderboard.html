@@ -9,7 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=57" />
+  <link rel="stylesheet" href="/friendship-run.css?v=58" />
 </head>
 <body class="tv-page tv-cycle-page">
   <section class="tv-gate is-active" id="tvGate">
@@ -27,8 +27,23 @@
 
   <main class="tv-cycle-stage" id="tvBoard" hidden>
     <section class="tv-scene tv-logo-scene is-visible" data-scene="logo" aria-label="Friendship Run logo">
+      <div class="tv-logo-sky" aria-hidden="true">
+        <span class="tv-logo-orbit orbit-a"></span>
+        <span class="tv-logo-orbit orbit-b"></span>
+        <span class="tv-logo-orbit orbit-c"></span>
+        <span class="tv-logo-spark spark-a"></span>
+        <span class="tv-logo-spark spark-b"></span>
+        <span class="tv-logo-spark spark-c"></span>
+      </div>
       <div class="tv-logo-glow"></div>
-      <img src="/assets/friendship-run-logo.png" alt="Sunway Pre-U Friendship Run" class="tv-event-logo" />
+      <div class="tv-logo-lockup">
+        <img id="tvEventLogo" src="/assets/friendship-run-logo-transparent.svg" alt="Sunway Pre-U Friendship Run" class="tv-event-logo" />
+        <div id="tvLogoFallback" class="tv-logo-fallback" aria-hidden="true">
+          <span>SUNWAY PRE-U</span>
+          <strong>Friendship Run</strong>
+        </div>
+      </div>
+      <p class="tv-logo-tagline">MOVE · CONNECT · CELEBRATE</p>
       <p class="tv-logo-date">15 AUGUST 2026 · SUNWAY COLLEGE</p>
       <div class="tv-logo-pulse"><span></span><span></span><span></span></div>
     </section>
@@ -69,6 +84,6 @@
     <div class="tv-scene-progress" aria-hidden="true"><span id="sceneProgress"></span></div>
   </main>
 
-  <script src="/friendship-run-leaderboard.js?v=57"></script>
+  <script src="/friendship-run-leaderboard.js?v=58"></script>
 </body>
 </html>
