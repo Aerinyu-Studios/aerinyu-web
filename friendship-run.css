@@ -1033,25 +1033,102 @@ body{
 @media(max-width:900px){.tv-board-inner,.tv-map-scene{padding:22px}.tv-map-header{align-items:start;flex-direction:column}.tv-map-header p{text-align:left}.tv-event-logo{width:92vw}.tv-logo-date{letter-spacing:.1em;text-align:center}}
 @media(prefers-reduced-motion:reduce){.tv-scene,.tv-event-logo,.tv-logo-glow,.tv-logo-pulse span,.tv-map-frame img{animation:none!important;transition-duration:.01ms!important}}
 
+/* TV SVG splash + resilient branded background (v58) */
+.tv-logo-scene{
+  isolation:isolate;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 16%,rgba(255,255,255,.95) 0 2%,transparent 23%),
+    radial-gradient(circle at 84% 80%,rgba(135,181,255,.28),transparent 34%),
+    linear-gradient(145deg,#b9d8ff 0%,#dceeff 38%,#eff9ff 70%,#d8f5ed 100%)!important;
+}
+.tv-logo-scene::before{
+  content:"";
+  position:absolute;
+  inset:-16%;
+  z-index:-3;
+  background:
+    linear-gradient(118deg,transparent 0 57%,rgba(255,255,255,.38) 57.2% 57.8%,transparent 58%),
+    linear-gradient(62deg,transparent 0 43%,rgba(65,102,205,.09) 43.2% 43.7%,transparent 44%);
+  animation:tvSkyDrift 14s ease-in-out infinite alternate;
+}
+.tv-logo-scene::after{
+  content:"";
+  position:absolute;
+  left:-5%;right:-5%;bottom:-12%;height:34%;
+  z-index:-2;
+  border-radius:50% 50% 0 0/100% 100% 0 0;
+  background:linear-gradient(180deg,rgba(76,111,224,.13),rgba(55,86,178,.04));
+  border-top:1px solid rgba(46,76,156,.18);
+}
+.tv-logo-sky{position:absolute;inset:0;z-index:-1;pointer-events:none}
+.tv-logo-orbit{position:absolute;border:1px solid rgba(35,66,151,.15);border-radius:50%;animation:tvOrbitFloat 9s ease-in-out infinite alternate}
+.tv-logo-orbit.orbit-a{width:38vw;height:38vw;right:-14vw;top:-18vw}
+.tv-logo-orbit.orbit-b{width:22vw;height:22vw;left:-8vw;bottom:-8vw;animation-delay:-2.4s}
+.tv-logo-orbit.orbit-c{width:11vw;height:11vw;right:14vw;bottom:9vh;border-style:dashed;animation-delay:-4s}
+.tv-logo-spark{position:absolute;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 24px rgba(255,255,255,.95);animation:tvSpark 3.2s ease-in-out infinite}
+.tv-logo-spark.spark-a{left:17%;top:25%}.tv-logo-spark.spark-b{right:21%;top:30%;animation-delay:-1.1s}.tv-logo-spark.spark-c{right:32%;bottom:22%;animation-delay:-2.2s}
+.tv-logo-lockup{position:relative;z-index:2;width:min(78vw,1180px);min-height:min(45vh,540px);display:grid;place-items:center}
+.tv-event-logo{width:100%!important;max-height:58vh!important;object-fit:contain;filter:drop-shadow(0 22px 45px rgba(32,61,124,.2));animation:tvLogoEnter 1.1s cubic-bezier(.2,.85,.25,1) both,tvLogoFloat 5.5s 1.1s ease-in-out infinite!important}
+.tv-event-logo.is-unavailable{display:none}
+.tv-logo-fallback{display:none;justify-items:center;text-align:center;color:#101a48;text-shadow:0 12px 36px rgba(26,55,128,.12);animation:tvLogoEnter .9s cubic-bezier(.2,.85,.25,1) both}
+.tv-logo-fallback.is-visible{display:grid}
+.tv-logo-fallback span{font-size:clamp(34px,6vw,92px);font-weight:900;letter-spacing:-.06em;line-height:.9}
+.tv-logo-fallback strong{font-size:clamp(46px,8vw,130px);font-weight:800;line-height:.95;letter-spacing:-.065em;background:linear-gradient(100deg,#ee5571,#526fe1 48%,#5c20da);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tv-logo-tagline{position:relative;z-index:2;margin:-4px 0 0;color:#516180;font-size:clamp(12px,1vw,17px);font-weight:800;letter-spacing:.26em}
+.tv-logo-date{margin-top:-8px!important}
+.tv-logo-glow{width:min(76vw,1180px)!important;background:radial-gradient(ellipse,rgba(255,255,255,.55),rgba(76,111,224,.16) 45%,transparent 72%)!important}
+@keyframes tvSkyDrift{to{transform:translate3d(3%,2%,0) scale(1.025)}}
+@keyframes tvOrbitFloat{to{transform:translate3d(18px,-14px,0) rotate(4deg)}}
+@keyframes tvSpark{0%,100%{opacity:.25;transform:scale(.65)}50%{opacity:1;transform:scale(1.35)}}
+@keyframes tvLogoFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+/* Route image must remain fully visible on any TV aspect ratio */
+.tv-map-scene{grid-template-rows:auto minmax(0,1fr) auto!important;min-height:0}
+.tv-map-frame{min-width:0;min-height:0;height:100%;padding:clamp(8px,1vw,16px)!important;overflow:hidden;display:grid;place-items:center}
+.tv-map-frame img{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain!important;object-position:center!important}
+
+/* v59 — full-screen route map fit */
 .tv-map-scene {
-  grid-template-rows: auto minmax(0, 1fr) auto !important;
-  min-height: 0;
+  display: grid !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 0 !important;
+  padding: clamp(10px, 1.2vw, 22px) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* The uploaded route artwork already contains its own title and labels. */
+.tv-map-header,
+.tv-map-footer {
+  display: none !important;
 }
 
 .tv-map-frame {
-  min-width: 0;
-  min-height: 0;
-  height: 100%;
-  padding: clamp(8px, 1vw, 16px);
-  overflow: hidden;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: hidden !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .tv-map-frame img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-width: 100%;
-  max-height: 100%;
+  display: block !important;
+  width: auto !important;
+  height: auto !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
   object-fit: contain !important;
-  object-position: center;
+  object-position: center center !important;
+  transform: none !important;
+  animation: none !important;
+  filter: drop-shadow(0 14px 34px rgba(23, 43, 91, .14)) !important;
 }
