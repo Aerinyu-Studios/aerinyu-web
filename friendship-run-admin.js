@@ -10,6 +10,13 @@ async function api(path='',options={}){
   return body;
 }
 
+async function displayApi(path='',options={}){
+  const response=await fetch(`/api/friendship-run/display-admin${path}`,{...options,headers:{...(options.body?{'Content-Type':'application/json'}:{}),'x-admin-key':adminKey,...(options.headers||{})}});
+  const body=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(body.error||'Display request failed.');
+  return body;
+}
+
 function renderPlayers(){
   const query=$('#adminSearch').value.trim().toLowerCase();
   const filtered=entries.filter(e=>`${e.name} ${e.student_id}`.toLowerCase().includes(query));
@@ -77,9 +84,9 @@ function renderAnnouncements(){
 
 function render(){renderStats();renderDisplaySettings();renderAnnouncements();renderPlayers();renderPayments();}
 async function load(){
-  const data=await api();
+  const [data, displayData] = await Promise.all([api(), displayApi()]);
   entries=data.entries||[];payments=data.payments||[];totals=data.totals||{};
-  displaySettings=data.display_settings||{};announcements=data.announcements||[];
+  displaySettings=displayData.display_settings||{};announcements=displayData.announcements||[];
   render();
 }
 
@@ -109,12 +116,12 @@ function editAnnouncement(event){
 async function toggleAnnouncement(event){
   const id=event.target.closest('[data-announcement-id]').dataset.announcementId;
   const item=announcements.find(row=>row.id===id);if(!item)return;
-  await api(`?type=announcement&id=${id}`,{method:'PATCH',body:JSON.stringify({is_active:!item.is_active})});await load();
+  await displayApi(`?type=announcement&id=${id}`,{method:'PATCH',body:JSON.stringify({is_active:!item.is_active})});await load();
 }
 async function deleteAnnouncement(event){
   const id=event.target.closest('[data-announcement-id]').dataset.announcementId;
   if(!confirm('Delete this announcement?'))return;
-  await api(`?type=announcement&id=${id}`,{method:'DELETE'});resetAnnouncementForm();await load();
+  await displayApi(`?type=announcement&id=${id}`,{method:'DELETE'});resetAnnouncementForm();await load();
 }
 
 async function editPlayer(e){const id=e.target.closest('[data-id]').dataset.id,entry=entries.find(x=>x.id===id);const name=prompt('Player name',entry.name);if(name===null)return;const student_id=prompt('Student ID',entry.student_id);if(student_id===null)return;const score=prompt('Score',String(entry.best_score??0));if(score===null)return;await api(`?id=${id}`,{method:'PATCH',body:JSON.stringify({name,student_id,best_score:Number(score),attempt_used:true})});await load()}
@@ -128,7 +135,7 @@ $('#displaySettingsForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const message=$('#displaySettingsMessage');message.textContent='Applying...';
   try{
     const payload={display_mode:$('#displayMode').value,logo_duration_ms:Number($('#logoDuration').value)*1000,leaderboard_duration_ms:Number($('#leaderboardDuration').value)*1000,map_duration_ms:Number($('#mapDuration').value)*1000,announcement_duration_ms:Number($('#announcementDuration').value)*1000};
-    const data=await api('?type=display-settings',{method:'PATCH',body:JSON.stringify(payload)});displaySettings=data.settings;renderDisplaySettings();message.textContent='TV display updated.';
+    const data=await displayApi('?type=display-settings',{method:'PATCH',body:JSON.stringify(payload)});displaySettings=data.settings;renderDisplaySettings();message.textContent='TV display updated.';
   }catch(error){message.textContent=error.message}
 });
 
@@ -136,7 +143,7 @@ $('#announcementForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const id=$('#announcementId').value;const message=$('#announcementMessage');message.textContent='Saving...';
   const seconds=$('#announcementSeconds').value;
   const payload={eyebrow:$('#announcementEyebrow').value,title:$('#announcementTitle').value,body:$('#announcementBody').value,sort_order:Number($('#announcementOrder').value||0),duration_ms:seconds?Number(seconds)*1000:null,is_active:$('#announcementActive').checked};
-  try{await api(id?`?type=announcement&id=${id}`:'?type=announcement',{method:id?'PATCH':'POST',body:JSON.stringify(payload)});resetAnnouncementForm();await load();}catch(error){message.textContent=error.message}
+  try{await displayApi(id?`?type=announcement&id=${id}`:'?type=announcement',{method:id?'PATCH':'POST',body:JSON.stringify(payload)});resetAnnouncementForm();await load();}catch(error){message.textContent=error.message}
 });
 $('#announcementReset')?.addEventListener('click',resetAnnouncementForm);
 
