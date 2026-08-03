@@ -1197,3 +1197,39 @@ body{
 
 @media(max-width:900px){.admin-display-heading{flex-direction:column}.admin-display-form,.announcement-admin-grid{grid-template-columns:1fr}.display-duration-grid{grid-template-columns:1fr 1fr}.tv-announcement-card{width:92vw;min-height:70vh;padding:38px}.tv-announcement-card footer{flex-direction:column}}
 @media(prefers-reduced-motion:reduce){.tv-announcement-card,.announcement-orb{animation:none!important}}
+
+
+/* v63 — continuous motion for fixed TV display modes */
+.tv-scene-progress{transition:opacity .35s ease}
+.tv-scene-progress.is-hidden{opacity:0}
+.tv-cycle-stage.is-single-scene .tv-logo-scene,
+.tv-cycle-stage.is-single-scene .tv-leaderboard-scene,
+.tv-cycle-stage.is-single-scene .tv-map-scene,
+.tv-cycle-stage.is-single-scene .tv-announcement-scene{animation:tvFixedBackdrop 16s ease-in-out infinite alternate}
+@keyframes tvFixedBackdrop{0%{background-position:48% 48%,0 0;filter:saturate(1)}100%{background-position:53% 52%,0 0;filter:saturate(1.035)}}
+.tv-cycle-stage.is-single-scene[data-hold-scene="logo"] .tv-logo-lockup{animation:tvLogoHold 7s ease-in-out infinite}
+.tv-cycle-stage.is-single-scene[data-hold-scene="logo"] .tv-logo-tagline,
+.tv-cycle-stage.is-single-scene[data-hold-scene="logo"] .tv-logo-date{animation:tvTextBreathe 5.5s ease-in-out infinite}
+.tv-cycle-stage.is-single-scene[data-hold-scene="logo"] .tv-logo-sky{animation:tvSkyDrift 18s linear infinite alternate}
+@keyframes tvLogoHold{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.012)}}
+@keyframes tvTextBreathe{0%,100%{opacity:.78;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+@keyframes tvSkyDrift{from{transform:translate3d(-.5%,-.4%,0) rotate(-.25deg)}to{transform:translate3d(.7%,.5%,0) rotate(.25deg)}}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-podium-card{animation:tvPodiumIdle 6s ease-in-out infinite}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-podium-card.first{animation-delay:-2s}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-podium-card.second{animation-delay:-4s}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-podium-card.third{animation-delay:-1s}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-ranking-row{animation:tvRowIdle 8s ease-in-out infinite}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-ranking-row:nth-child(2n){animation-delay:-4s}
+.tv-cycle-stage.is-single-scene[data-hold-scene="leaderboard"] .tv-live i{animation:tvLivePulse 1.5s ease-out infinite}
+@keyframes tvPodiumIdle{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes tvRowIdle{0%,100%{transform:translateX(0);box-shadow:0 0 0 rgba(60,94,180,0)}50%{transform:translateX(3px);box-shadow:0 10px 24px rgba(60,94,180,.055)}}
+@keyframes tvLivePulse{0%{box-shadow:0 0 0 0 rgba(239,86,115,.38)}100%{box-shadow:0 0 0 12px rgba(239,86,115,0)}}
+.tv-cycle-stage.is-single-scene[data-hold-scene="map"] .tv-map-frame{animation:tvMapHold 9s ease-in-out infinite}
+.tv-cycle-stage.is-single-scene[data-hold-scene="map"] .tv-map-frame img{animation:tvMapImageHold 12s ease-in-out infinite!important}
+@keyframes tvMapHold{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-5px,0)}}
+@keyframes tvMapImageHold{0%,100%{opacity:.965;filter:drop-shadow(0 14px 34px rgba(23,43,91,.13))}50%{opacity:1;filter:drop-shadow(0 20px 42px rgba(23,43,91,.19))}}
+.tv-cycle-stage.is-single-scene[data-hold-scene="announcement"] .tv-announcement-card{animation:announcementCardFloat 6s ease-in-out infinite,tvAnnouncementGlow 10s ease-in-out infinite alternate!important}
+@keyframes tvAnnouncementGlow{from{box-shadow:0 32px 90px rgba(34,69,142,.14)}to{box-shadow:0 42px 120px rgba(70,92,190,.23)}}
+.tv-cycle-stage.is-single-scene.ambient-replay .tv-scene.is-visible{animation:tvAmbientReplay 1.1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes tvAmbientReplay{0%{opacity:.9;transform:scale(.994)}55%{opacity:1;transform:scale(1.004)}100%{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.tv-cycle-stage.is-single-scene .tv-scene,.tv-cycle-stage.is-single-scene .tv-logo-lockup,.tv-cycle-stage.is-single-scene .tv-logo-tagline,.tv-cycle-stage.is-single-scene .tv-logo-date,.tv-cycle-stage.is-single-scene .tv-logo-sky,.tv-cycle-stage.is-single-scene .tv-podium-card,.tv-cycle-stage.is-single-scene .tv-ranking-row,.tv-cycle-stage.is-single-scene .tv-map-frame,.tv-cycle-stage.is-single-scene .tv-map-frame img,.tv-cycle-stage.is-single-scene .tv-announcement-card{animation:none!important}}

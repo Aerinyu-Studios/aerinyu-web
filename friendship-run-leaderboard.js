@@ -18,6 +18,7 @@ let displayConfig = {
 let sceneSequence = ['logo', 'leaderboard', 'map'];
 let sceneIndex = 0;
 let currentSceneKey = '';
+let ambientReplayTimer = null;
 
 function initLogoFallback(){
   const logo = $('#tvEventLogo');
@@ -61,6 +62,7 @@ function showGate(message=''){
   clearInterval(refreshTimer);
   clearInterval(configTimer);
   clearTimeout(sceneTimer);
+  clearTimeout(ambientReplayTimer);
   progressAnimation?.cancel();
   hasStartedCycle=false;
   $('#tvBoard').hidden=true;
@@ -172,11 +174,32 @@ function sceneDuration(key){
   return 6000;
 }
 
+
+function restartAmbientMotion(baseName){
+  const stage=$('#tvBoard');
+  if(!stage) return;
+  stage.dataset.holdScene=baseName;
+  stage.classList.remove('is-single-scene','ambient-replay');
+  clearTimeout(ambientReplayTimer);
+  if(sceneSequence.length!==1) return;
+  stage.classList.add('is-single-scene');
+
+  const replay=()=>{
+    stage.classList.remove('ambient-replay');
+    void stage.offsetWidth;
+    stage.classList.add('ambient-replay');
+    ambientReplayTimer=setTimeout(replay,14000);
+  };
+  ambientReplayTimer=setTimeout(replay,11000);
+}
+
 function showScene(key){
   clearTimeout(sceneTimer);
+  clearTimeout(ambientReplayTimer);
   progressAnimation?.cancel();
   currentSceneKey=key;
   const baseName=key.startsWith('announcement:')?'announcement':key;
+  restartAmbientMotion(baseName);
 
   if(baseName==='announcement'){
     const id=key.split(':')[1];
@@ -191,7 +214,9 @@ function showScene(key){
 
   const duration=sceneDuration(key);
   const bar=$('#sceneProgress');
-  if(bar){
+  const progressWrap=bar?.closest('.tv-scene-progress');
+  progressWrap?.classList.toggle('is-hidden',sceneSequence.length===1);
+  if(bar && sceneSequence.length>1){
     bar.style.transform='scaleX(0)';
     progressAnimation=bar.animate([{transform:'scaleX(0)'},{transform:'scaleX(1)'}],{duration,easing:'linear',fill:'forwards'});
   }
