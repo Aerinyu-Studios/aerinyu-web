@@ -5,57 +5,70 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="robots" content="noindex,nofollow,noarchive" />
   <meta name="theme-color" content="#dceeff" />
-  <title>Friendship Run Live Leaderboard</title>
+  <title>Friendship Run Live Display</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=54" />
+  <link rel="stylesheet" href="/friendship-run.css?v=57" />
 </head>
-<body class="tv-page">
+<body class="tv-page tv-cycle-page">
   <section class="tv-gate is-active" id="tvGate">
     <div class="gate-card panel">
       <div class="brand-lockup"><span class="brand-rule"></span><p>SUNWAY PRE-U FRIENDSHIP RUN</p></div>
-      <h1>Live <span>Leaderboard</span></h1>
-      <p class="supporting-copy">Enter the event password once to begin the live display.</p>
+      <h1>Live <span>Display</span></h1>
+      <p class="supporting-copy">Enter the event password once to start the TV display.</p>
       <form id="tvAccessForm" class="form-stack">
         <label><span>Access password</span><input id="tvAccessPassword" type="password" required /></label>
-        <button class="button primary" type="submit">Open leaderboard</button>
+        <button class="button primary" type="submit">Start display</button>
         <p id="tvAccessMessage" class="message"></p>
       </form>
     </div>
   </section>
 
-  <main class="tv-board" id="tvBoard" hidden>
-    <header class="tv-header tv-header-simple">
-      <div class="tv-brand-simple">
-        <span>SUNWAY PRE-U FRIENDSHIP RUN</span>
-        <h1>Live Leaderboard</h1>
-        <p>Snake Challenge</p>
-      </div>
-      <div class="tv-live"><i></i><span>LIVE</span><small id="lastUpdated">Updating...</small></div>
-    </header>
-
-    <section class="tv-podium" id="tvPodium"></section>
-
-    <section class="tv-rankings panel">
-      <div class="tv-rankings-head"><span>RANK</span><span>PLAYER</span><span>SCORE</span></div>
-      <div id="tvLeaderboard" class="tv-ranking-list"></div>
+  <main class="tv-cycle-stage" id="tvBoard" hidden>
+    <section class="tv-scene tv-logo-scene is-visible" data-scene="logo" aria-label="Friendship Run logo">
+      <div class="tv-logo-glow"></div>
+      <img src="/assets/friendship-run-logo.png" alt="Sunway Pre-U Friendship Run" class="tv-event-logo" />
+      <p class="tv-logo-date">15 AUGUST 2026 · SUNWAY COLLEGE</p>
+      <div class="tv-logo-pulse"><span></span><span></span><span></span></div>
     </section>
 
-    <footer class="tv-footer"><span>SUNWAY COLLEGE</span><span>FRIENDSHIP RUN 2026</span><span>LIVE EVENT DISPLAY</span></footer>
+    <section class="tv-scene tv-leaderboard-scene" data-scene="leaderboard" aria-label="Live leaderboard">
+      <div class="tv-board-inner">
+        <header class="tv-header tv-header-simple">
+          <div class="tv-brand-simple">
+            <span>SUNWAY PRE-U FRIENDSHIP RUN</span>
+            <h1>Live Leaderboard</h1>
+            <p>Snake Challenge</p>
+          </div>
+          <div class="tv-live"><i></i><span>LIVE</span><small id="lastUpdated">Updating...</small></div>
+        </header>
+
+        <section class="tv-podium" id="tvPodium"></section>
+
+        <section class="tv-rankings panel">
+          <div class="tv-rankings-head"><span>RANK</span><span>PLAYER</span><span>SCORE</span></div>
+          <div id="tvLeaderboard" class="tv-ranking-list"></div>
+        </section>
+
+        <footer class="tv-footer"><span>SUNWAY COLLEGE</span><span>FRIENDSHIP RUN 2026</span><span>LIVE EVENT DISPLAY</span></footer>
+      </div>
+    </section>
+
+    <section class="tv-scene tv-map-scene" data-scene="map" aria-label="Friendship Run route map">
+      <header class="tv-map-header">
+        <div><span>GET READY FOR RACE DAY</span><h1>Friendship Run Route</h1></div>
+        <p>Hydration and first-aid stations are marked along the route.</p>
+      </header>
+      <div class="tv-map-frame">
+        <img src="/assets/friendship-run-route-map.png" alt="Sunway Pre-U Friendship Run 2026 route map" />
+      </div>
+      <footer class="tv-map-footer"><span>15 AUGUST 2026</span><span>08:00 AM · SUNWAY COLLEGE</span></footer>
+    </section>
+
+    <div class="tv-scene-progress" aria-hidden="true"><span id="sceneProgress"></span></div>
   </main>
 
-  <dialog id="tvMessageDialog" class="message-dialog tv-message-dialog">
-    <div class="message-dialog-head">
-      <div><span class="section-label">PLAYER MESSAGE</span><h2 id="tvMessageName">Message</h2></div>
-      <button id="closeTvMessage" class="dialog-close" type="button" aria-label="Close message">×</button>
-    </div>
-    <div class="message-dialog-body">
-      <span id="tvMessageProgramme" class="message-programme"></span>
-      <p id="tvMessageText"></p>
-    </div>
-  </dialog>
-
-  <script src="/friendship-run-leaderboard.js?v=54"></script>
+  <script src="/friendship-run-leaderboard.js?v=57"></script>
 </body>
 </html>
