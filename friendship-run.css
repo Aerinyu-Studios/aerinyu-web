@@ -1132,3 +1132,23 @@ body{
   animation: none !important;
   filter: drop-shadow(0 14px 34px rgba(23, 43, 91, .14)) !important;
 }
+
+.tv-splash-scene::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -32vh;
+  width: 120vw;
+  height: 55vh;
+  transform: translateX(-50%);
+  border-radius: 50% 50% 0 0;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(77, 120, 220, 0.08) 0%,
+    rgba(77, 120, 220, 0.035) 48%,
+    transparent 75%
+  );
+  border-top: 1px solid rgba(77, 120, 220, 0.08);
+  filter: blur(2px);
+  pointer-events: none;
+}
