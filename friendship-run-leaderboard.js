@@ -19,6 +19,11 @@ let sceneSequence = ['logo', 'leaderboard', 'map'];
 let sceneIndex = 0;
 let currentSceneKey = '';
 let ambientReplayTimer = null;
+const boothId = [1,2].includes(Number(document.body?.dataset?.booth)) ? Number(document.body.dataset.booth) : (/leaderboard2(?:\.html)?$/.test(location.pathname) ? 2 : 1);
+let livePollTimer = null;
+let liveGameActive = false;
+const liveCanvas = document.querySelector('#liveGameCanvas');
+const liveCtx = liveCanvas?.getContext('2d');
 
 function initLogoFallback(){
   const logo = $('#tvEventLogo');
@@ -63,6 +68,7 @@ function showGate(message=''){
   clearInterval(configTimer);
   clearTimeout(sceneTimer);
   clearTimeout(ambientReplayTimer);
+  clearInterval(livePollTimer);
   progressAnimation?.cancel();
   hasStartedCycle=false;
   $('#tvBoard').hidden=true;
@@ -156,7 +162,19 @@ function renderAnnouncement(item){
   $('#tvAnnouncementEyebrow').textContent=item?.eyebrow||'EVENT UPDATE';
   $('#tvAnnouncementTitle').textContent=item?.title||'Friendship Run Update';
   $('#tvAnnouncementBody').textContent=item?.body||'Important event information will appear here.';
-  const card=document.querySelector('.tv-announcement-card');
+  const media=$('#tvAnnouncementMedia');
+  const image=$('#tvAnnouncementImage');
+  const card=$('#tvAnnouncementCard');
+  if(item?.image_url){
+    image.src=item.image_url;
+    image.alt=item.image_alt||item.title||'Announcement image';
+    media.hidden=false;
+    card?.classList.add('has-image');
+  }else{
+    image.removeAttribute('src');
+    media.hidden=true;
+    card?.classList.remove('has-image');
+  }
   card?.classList.remove('is-entering');
   requestAnimationFrame(()=>card?.classList.add('is-entering'));
 }
@@ -181,6 +199,7 @@ function restartAmbientMotion(baseName){
   stage.dataset.holdScene=baseName;
   stage.classList.remove('is-single-scene','ambient-replay');
   clearTimeout(ambientReplayTimer);
+  clearInterval(livePollTimer);
   if(sceneSequence.length!==1) return;
   stage.classList.add('is-single-scene');
 
@@ -194,8 +213,10 @@ function restartAmbientMotion(baseName){
 }
 
 function showScene(key){
+  if(liveGameActive && key!=='live-game') return;
   clearTimeout(sceneTimer);
   clearTimeout(ambientReplayTimer);
+  clearInterval(livePollTimer);
   progressAnimation?.cancel();
   currentSceneKey=key;
   const baseName=key.startsWith('announcement:')?'announcement':key;
@@ -228,15 +249,77 @@ function showScene(key){
   },duration);
 }
 
+function drawLiveGame(game){
+  if(!liveCtx||!liveCanvas) return;
+  const cells=Number(game.cells)||24;
+  const size=liveCanvas.width;
+  const cell=size/cells;
+  liveCtx.fillStyle='#dcecff';
+  liveCtx.fillRect(0,0,size,size);
+  liveCtx.strokeStyle='rgba(23,33,107,.13)';
+  liveCtx.lineWidth=1;
+  for(let i=0;i<=cells;i+=1){
+    liveCtx.beginPath();liveCtx.moveTo(i*cell,0);liveCtx.lineTo(i*cell,size);liveCtx.stroke();
+    liveCtx.beginPath();liveCtx.moveTo(0,i*cell);liveCtx.lineTo(size,i*cell);liveCtx.stroke();
+  }
+  const food=game.food||{};
+  if(Number.isInteger(food.x)&&Number.isInteger(food.y)){
+    liveCtx.fillStyle='#d84f73';liveCtx.beginPath();liveCtx.arc(food.x*cell+cell/2,food.y*cell+cell/2,cell*.28,0,Math.PI*2);liveCtx.fill();
+  }
+  (Array.isArray(game.snake)?game.snake:[]).forEach((part,index)=>{
+    liveCtx.fillStyle=index===0?'#090f23':(index%2?'#121a31':'#1a243e');
+    liveCtx.fillRect(part.x*cell+2,part.y*cell+2,cell-4,cell-4);
+    if(index===0){liveCtx.fillStyle='#fff';liveCtx.fillRect(part.x*cell+cell*.62,part.y*cell+cell*.22,Math.max(4,cell*.16),Math.max(4,cell*.16));}
+  });
+}
+
+function showLiveGame(game){
+  liveGameActive=true;
+  clearTimeout(sceneTimer);
+  progressAnimation?.cancel();
+  document.querySelectorAll('.tv-scene').forEach(scene=>{
+    const active=scene.dataset.scene==='live-game';
+    scene.classList.toggle('is-visible',active);
+    scene.setAttribute('aria-hidden',String(!active));
+  });
+  $('#liveGamePlayer').textContent=game.player_name||'Player';
+  $('#liveGameProgramme').textContent=game.programme||'Snake Challenge';
+  $('#liveGameScore').textContent=String(game.score||0);
+  $('#liveGameBoothLabel').textContent=`BOOTH ${boothId}`;
+  drawLiveGame(game);
+}
+
+function scheduleLivePoll(delay){
+  clearTimeout(livePollTimer);
+  livePollTimer=setTimeout(loadLiveGame,delay);
+}
+
+async function loadLiveGame(){
+  let nextDelay=1500;
+  try{
+    const data=await api(`leaderboard?live=1&booth=${boothId}`);
+    if(data.live_game){showLiveGame(data.live_game);nextDelay=260;}
+    else if(liveGameActive){liveGameActive=false;rebuildSceneSequence(true);}
+  }catch(error){
+    if(error.status===401){localStorage.removeItem('friendship_run_tv_access');accessToken='';showGate('Session expired. Enter the event password again.');return;}
+    nextDelay=2500;
+  }
+  if(accessToken) scheduleLivePoll(nextDelay);
+}
+
 function startAutoRefresh(){
   clearInterval(refreshTimer);
   clearInterval(configTimer);
+  clearTimeout(livePollTimer);
   refreshTimer=setInterval(loadLeaderboard,5000);
   configTimer=setInterval(loadDisplayConfig,5000);
+  scheduleLivePoll(0);
 }
 
 async function init(){
   initLogoFallback();
+  if($('#tvStationLabel')) $('#tvStationLabel').textContent=`Booth ${boothId}`;
+  if($('#liveGameBoothLabel')) $('#liveGameBoothLabel').textContent=`BOOTH ${boothId}`;
   if(!accessToken) return showGate();
   const [leaderboardLoaded, configLoaded] = await Promise.all([loadLeaderboard(), loadDisplayConfig()]);
   if (!leaderboardLoaded || !configLoaded) return;

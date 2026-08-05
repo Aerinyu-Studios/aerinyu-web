@@ -12,30 +12,24 @@ export default async function handler(req,res){
     const programme=clean(req.body?.programme,60);
     const playerMessage=clean(req.body?.message,180);
     const playCode=String(req.body?.play_code||'').replace(/\D/g,'').slice(0,6);
+    const liveDisplay=req.body?.live_display===true;
     if(name.length<2||studentId.length<3) return json(res,400,{error:'Enter a valid name and student ID.'});
     if(programme.length<2) return json(res,400,{error:'Enter the player programme.'});
     if(!/^\d{6}$/.test(playCode)) return json(res,400,{error:'Enter the six-digit play code from the booth.'});
     if(req.body?.consent!==true) return json(res,400,{error:'Scoreboard consent is required.'});
 
     const normalized=studentId.toUpperCase().replace(/\s+/g,'');
-    const {data:payment,error:paymentError}=await supabase
-      .from('friendship_run_payments')
-      .select('*')
-      .eq('play_code',playCode)
-      .eq('student_id_normalized',normalized)
-      .maybeSingle();
+    const {data:payment,error:paymentError}=await supabase.from('friendship_run_payments').select('*').eq('play_code',playCode).eq('student_id_normalized',normalized).maybeSingle();
     if(paymentError) throw paymentError;
     if(!payment) return json(res,403,{error:'This play code does not match the student ID.'});
     if(payment.status!=='unused') return json(res,409,{error:'This play code has already been used or revoked.'});
-    if(new Date(payment.expires_at).getTime()<Date.now()) {
+    if(new Date(payment.expires_at).getTime()<Date.now()){
       await supabase.from('friendship_run_payments').update({status:'expired'}).eq('id',payment.id).eq('status','unused');
       return json(res,410,{error:'This play code has expired. Please return to the booth.'});
     }
 
-    const {data:existing,error:existingError}=await supabase
-      .from('friendship_run_players').select('*').eq('student_id_normalized',normalized).maybeSingle();
+    const {data:existing,error:existingError}=await supabase.from('friendship_run_players').select('*').eq('student_id_normalized',normalized).maybeSingle();
     if(existingError) throw existingError;
-
     let photoUrl=existing?.photo_url||null;
     const photo=req.body?.photo_data;
     if(photo){
@@ -43,7 +37,7 @@ export default async function handler(req,res){
       if(!match) return json(res,400,{error:'Invalid profile picture.'});
       const buffer=Buffer.from(match[2],'base64');
       if(buffer.length>400*1024) return json(res,400,{error:'Profile picture is too large.'});
-      const ext={"image/jpeg":'jpg',"image/png":'png',"image/webp":'webp'}[match[1]];
+      const ext={'image/jpeg':'jpg','image/png':'png','image/webp':'webp'}[match[1]];
       const path=`${crypto.randomUUID()}.${ext}`;
       const upload=await supabase.storage.from('friendship-run-photos').upload(path,buffer,{contentType:match[1],upsert:false});
       if(upload.error) throw upload.error;
@@ -52,45 +46,37 @@ export default async function handler(req,res){
 
     const nonce=crypto.randomUUID();
     const attemptStartedAt=new Date().toISOString();
-    const attemptType=payment.attempt_type === 'trial' ? 'trial' : 'official';
+    const attemptType=payment.attempt_type==='trial'?'trial':'official';
+    const boothId=[1,2].includes(Number(payment.booth_id))?Number(payment.booth_id):1;
     const common={
       name,programme,message:playerMessage,student_id:studentId,student_id_normalized:normalized,photo_url:photoUrl,
       payment_confirmed:true,attempt_started_at:attemptStartedAt,attempt_finished_at:null,current_attempt_nonce:nonce,
       current_payment_id:payment.id,current_attempt_kind:attemptType,current_attempt_completed:false,updated_at:new Date().toISOString()
     };
-
     let player;
     if(existing){
       const updated=await supabase.from('friendship_run_players').update(common).eq('id',existing.id).select().single();
       if(updated.error) throw updated.error; player=updated.data;
     }else{
-      const inserted=await supabase.from('friendship_run_players').insert({
-        ...common,score:null,best_score:0,duration_ms:null,attempt_used:false
-      }).select().single();
+      const inserted=await supabase.from('friendship_run_players').insert({...common,score:null,best_score:0,duration_ms:null,attempt_used:false}).select().single();
       if(inserted.error) throw inserted.error; player=inserted.data;
     }
 
-    const redeemed=await supabase.from('friendship_run_payments').update({
-      status:'redeemed',redeemed_at:new Date().toISOString(),player_id:player.id
-    }).eq('id',payment.id).eq('status','unused').select().single();
+    const redeemed=await supabase.from('friendship_run_payments').update({status:'redeemed',redeemed_at:new Date().toISOString(),player_id:player.id}).eq('id',payment.id).eq('status','unused').select().single();
     if(redeemed.error) throw redeemed.error;
-
     await supabase.from('friendship_run_audit_log').insert({
       event_type:'code_redeemed',payment_id:payment.id,player_id:player.id,student_id_normalized:normalized,
       operator_username:payment.operator_username,operator_name:payment.operator_name,
-      metadata:{attempt_type:attemptType,eligibility_source:payment.eligibility_source,payment_method:payment.payment_method}
+      metadata:{booth_id:boothId,attempt_type:attemptType,eligibility_source:payment.eligibility_source,payment_method:payment.payment_method,live_display_requested:liveDisplay}
     });
 
     const top=await supabase.from('friendship_run_players').select('best_score').eq('attempt_used',true).order('best_score',{ascending:false}).limit(1).maybeSingle();
     if(top.error) throw top.error;
-
-    const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,payment_id:payment.id,nonce,attempt_type:attemptType,started_at:Date.now()},60*30);
+    const attemptToken=sign({type:'friendship-run-attempt',player_id:player.id,payment_id:payment.id,nonce,attempt_type:attemptType,booth_id:boothId,live_display:liveDisplay,started_at:Date.now()},60*30);
     return json(res,200,{
       player:{id:player.id,name:player.name,programme:player.programme,message:player.message,photo_url:player.photo_url},
-      top_score:top.data?.best_score||0,
-      attempt_type:attemptType,
-      eligibility_source:payment.eligibility_source,
-      attempt_token:attemptToken
+      top_score:top.data?.best_score||0,attempt_type:attemptType,eligibility_source:payment.eligibility_source,
+      booth_id:boothId,live_display:liveDisplay,attempt_token:attemptToken
     });
   }catch(error){
     console.error('Friendship Run registration error:',error);

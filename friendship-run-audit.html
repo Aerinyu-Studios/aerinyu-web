@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>Friendship Run Booth Audit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/friendship-run.css?v=64" />
+  <link rel="stylesheet" href="/friendship-run-audit.css?v=64" />
+</head>
+<body class="audit-page">
+  <main class="audit-shell">
+    <header class="audit-header">
+      <div><span class="section-label">PRIVATE FINANCIAL & EVIDENCE RECORD</span><h1>Booth audit</h1><p>Review every code, payment, signup entitlement, evidence image and staff action.</p></div>
+      <div class="audit-header-actions"><a class="button secondary" href="/friendship-run/admin">Admin</a><button id="auditExport" class="button primary" type="button" hidden>Export CSV</button></div>
+    </header>
+
+    <section class="panel audit-auth" id="auditAuth">
+      <h2>Unlock audit records</h2>
+      <form id="auditAuthForm" class="form-stack">
+        <label><span>Admin key</span><input id="auditKey" type="password" required /></label>
+        <button class="button primary" type="submit">Open audit</button>
+        <p id="auditAuthMessage" class="message"></p>
+      </form>
+    </section>
+
+    <section id="auditPanel" hidden>
+      <section class="audit-stats" id="auditStats"></section>
+
+      <section class="panel audit-filters">
+        <div><span class="section-label">FILTER RECORDS</span><h2>Transaction archive</h2></div>
+        <div class="audit-filter-grid">
+          <label><span>Search</span><input id="auditSearch" placeholder="Student ID, code or staff name" /></label>
+          <label><span>Booth</span><select id="auditBooth"><option value="">Both booths</option><option value="1">Booth 1</option><option value="2">Booth 2</option></select></label>
+          <label><span>Record type</span><select id="auditType"><option value="">All records</option><option value="trial">Free trials</option><option value="booth_payment">Booth payments</option><option value="run_signup">Run signups</option></select></label>
+          <label><span>Method</span><select id="auditMethod"><option value="">All methods</option><option value="cash">Cash</option><option value="digital">Digital</option><option value="run_signup">Run signup</option><option value="none">No payment</option></select></label>
+          <label><span>Status</span><select id="auditStatus"><option value="">All statuses</option><option value="unused">Unused</option><option value="redeemed">Redeemed</option><option value="expired">Expired</option><option value="revoked">Revoked</option></select></label>
+          <button id="auditRefresh" class="button secondary" type="button">Refresh data</button>
+        </div>
+      </section>
+
+      <section class="audit-layout">
+        <div class="panel audit-record-panel">
+          <div class="audit-section-head"><div><span class="section-label">PAYMENT & CODE RECORDS</span><h2 id="auditRecordCount">0 records</h2></div></div>
+          <div id="auditRecords" class="audit-records"></div>
+        </div>
+        <aside class="audit-sidebar">
+          <section class="panel"><span class="section-label">BY BOOTH</span><div id="auditBoothBreakdown" class="audit-breakdown"></div></section>
+          <section class="panel"><span class="section-label">BY STAFF MEMBER</span><div id="auditOperatorBreakdown" class="audit-breakdown operator-breakdown"></div></section>
+          <section class="panel"><span class="section-label">RECENT AUDIT EVENTS</span><div id="auditEvents" class="audit-event-list"></div></section>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="auditProofDialog" class="audit-proof-dialog">
+    <div class="audit-proof-head"><div><span class="section-label">EVIDENCE IMAGE</span><h2 id="auditProofTitle">Payment proof</h2></div><button id="auditProofClose" class="dialog-close" type="button">×</button></div>
+    <img id="auditProofImage" alt="Payment evidence" />
+    <div id="auditProofMeta" class="audit-proof-meta"></div>
+  </dialog>
+  <script src="/friendship-run-audit.js?v=64"></script>
+</body>
+</html>

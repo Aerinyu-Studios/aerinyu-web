@@ -21,6 +21,10 @@ const cells = 24;
 const grid = canvas.width / cells;
 let audioContext = null;
 let boardFlashUntil = 0;
+let liveDisplayRequested = false;
+let liveBoothId = 1;
+let liveSyncInFlight = false;
+let lastLiveSyncAt = 0;
 
 function tone(frequency, duration = 0.07, type = 'square', volume = 0.035) {
   try {
@@ -190,12 +194,15 @@ $('#registrationForm').addEventListener('submit', async (event) => {
         message:$('#playerMessage').value.trim(),
         play_code:$('#playCode').value.trim(),
         consent:$('#scoreConsent').checked,
+        live_display:$('#liveDisplayConsent')?.checked === true,
         photo_data:capturedPhotoData
       })
     });
     player = data.player;
     attemptToken = data.attempt_token;
     currentAttemptType = data.attempt_type || 'official';
+    liveDisplayRequested = data.live_display === true;
+    liveBoothId = [1,2].includes(Number(data.booth_id)) ? Number(data.booth_id) : 1;
     $('#currentPlayer').textContent = player.name;
     $('#bestValue').textContent = String(data.top_score || 0).padStart(3,'0');
     const noticeTitle = document.querySelector('#attemptNoticeTitle');
@@ -254,6 +261,33 @@ function draw() {
   });
 }
 
+async function publishLiveState(active = true, force = false) {
+  if (!liveDisplayRequested || !attemptToken) return;
+  const now = Date.now();
+  if (!force && (liveSyncInFlight || now - lastLiveSyncAt < 240)) return;
+  liveSyncInFlight = true;
+  lastLiveSyncAt = now;
+  try {
+    await request('score', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'live-update',
+        attempt_token: attemptToken,
+        booth_id: liveBoothId,
+        active,
+        score,
+        cells,
+        snake,
+        food
+      })
+    });
+  } catch (error) {
+    console.debug('Live TV update skipped:', error.message);
+  } finally {
+    liveSyncInFlight = false;
+  }
+}
+
 function gameSpeed(){return Math.max(52,142-Math.floor(score/4)*7)}
 function speedLevel(){return Math.min(9,1+Math.floor(score/4))}
 function scheduleTick(){clearInterval(timer);timer=setInterval(tick,gameSpeed())}
@@ -274,22 +308,30 @@ function tick(){
     placeFood();scheduleTick();
   } else snake.pop();
   draw();
+  publishLiveState(true);
 }
 function changeDirection(next){if(!running)return;if(next.x+direction.x===0&&next.y+direction.y===0)return;queuedDirection=next}
 const directions={up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
-document.addEventListener('keydown',(event)=>{
-  const activeTag = document.activeElement?.tagName;
-  const isTyping = activeTag === 'INPUT' || activeTag === 'TEXTAREA' || activeTag === 'SELECT' || document.activeElement?.isContentEditable;
+window.addEventListener('keydown', (event) => {
+  const active = document.activeElement;
+  const isTyping = active && (
+    ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(active.tagName) ||
+    active.isContentEditable
+  );
   const gameVisible = screens.game.classList.contains('is-active');
   if (isTyping || !gameVisible || !running) return;
 
-  const map={ArrowUp:'up',w:'up',W:'up',ArrowDown:'down',s:'down',S:'down',ArrowLeft:'left',a:'left',A:'left',ArrowRight:'right',d:'right',D:'right'};
-  const mapped = map[event.key];
-  if(mapped){
-    event.preventDefault();
-    changeDirection(directions[mapped]);
-  }
-});
+  const keyMap = {
+    ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right',
+    w:'up', W:'up', s:'down', S:'down', a:'left', A:'left', d:'right', D:'right'
+  };
+  const codeMap = {KeyW:'up',KeyS:'down',KeyA:'left',KeyD:'right'};
+  const mapped = codeMap[event.code] || keyMap[event.key];
+  if (!mapped) return;
+  event.preventDefault();
+  event.stopPropagation();
+  changeDirection(directions[mapped]);
+}, {capture:true});
 document.querySelectorAll('[data-direction]').forEach(button=>button.addEventListener('pointerdown',()=>changeDirection(directions[button.dataset.direction])));
 
 $('#startButton').addEventListener('click',async()=>{
@@ -304,12 +346,14 @@ $('#startButton').addEventListener('click',async()=>{
   $('#gameOverlay').hidden=true;
   running=true;
   startedAt=Date.now();
+  publishLiveState(true, true);
   scheduleTick();
 });
 
 async function endGame(){
   if(!running)return;
   running=false;clearInterval(timer);playGameOverSound();
+  publishLiveState(false, true);
   $('#gameOverlay').hidden=false;$('#overlayTitle').textContent='GAME OVER';$('#overlayText').textContent='Submitting score...';$('#startButton').hidden=true;
   try{
     const data=await request('score',{method:'POST',body:JSON.stringify({attempt_token:attemptToken,score,duration_ms:Date.now()-startedAt})});
@@ -373,7 +417,7 @@ $('#refreshLeaderboard').addEventListener('click',loadLeaderboard);
 $('#newPlayerButton').addEventListener('click',async()=>{
   $('#registrationForm').reset();
   $('#registrationMessage').textContent='';
-  player=null;attemptToken='';currentAttemptType='official';
+  player=null;attemptToken='';currentAttemptType='official';liveDisplayRequested=false;liveBoothId=1;
   capturedPhotoData=null;
   $('#capturedPhoto').src='';
   $('#capturedPhoto').hidden=true;
@@ -383,7 +427,16 @@ $('#newPlayerButton').addEventListener('click',async()=>{
   showScreen('registration');
   await loadLeaderboard();
 });
-window.addEventListener('beforeunload',stopCamera);
+window.addEventListener('beforeunload', () => {
+  stopCamera();
+  if (running && liveDisplayRequested && attemptToken && accessToken) {
+    fetch('/api/friendship-run/score', {
+      method:'POST', keepalive:true,
+      headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},
+      body:JSON.stringify({action:'live-update',attempt_token:attemptToken,active:false,score,cells,snake,food})
+    }).catch(()=>{});
+  }
+});
 validateExistingToken();
 
 $('#playCode')?.addEventListener('input', event => { event.target.value = event.target.value.replace(/\D/g,'').slice(0,6); });

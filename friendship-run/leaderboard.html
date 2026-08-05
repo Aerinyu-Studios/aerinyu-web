@@ -9,10 +9,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=63" />
-  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="/friendship-run.css?v=64" />
 </head>
-<body class="tv-page tv-cycle-page">
+<body class="tv-page tv-cycle-page" data-booth="1">
   <section class="tv-gate is-active" id="tvGate">
     <div class="gate-card panel">
       <div class="brand-lockup"><span class="brand-rule"></span><p>SUNWAY PRE-U FRIENDSHIP RUN</p></div>
@@ -55,7 +54,7 @@
           <div class="tv-brand-simple">
             <span>SUNWAY PRE-U FRIENDSHIP RUN</span>
             <h1>Live Leaderboard</h1>
-            <p>Snake Challenge</p>
+            <p>Snake Challenge · <span id="tvStationLabel">Booth 1</span></p>
           </div>
           <div class="tv-live"><i></i><span>LIVE</span><small id="lastUpdated">Updating...</small></div>
         </header>
@@ -72,6 +71,17 @@
     </section>
 
 
+    <section class="tv-scene tv-live-game-scene" data-scene="live-game" aria-label="Live Snake game">
+      <div class="tv-live-game-shell">
+        <header class="tv-live-game-header">
+          <div><span class="tv-live-game-kicker"><i></i> LIVE FROM <b id="liveGameBoothLabel">BOOTH 1</b></span><h1 id="liveGamePlayer">Player</h1><p id="liveGameProgramme">Snake Challenge</p></div>
+          <div class="tv-live-game-score"><span>SCORE</span><strong id="liveGameScore">0</strong></div>
+        </header>
+        <div class="tv-live-game-frame"><canvas id="liveGameCanvas" width="720" height="720" aria-label="Live Snake game board"></canvas></div>
+        <footer><span>SUNWAY PRE-U FRIENDSHIP RUN</span><span>LIVE GAME DISPLAY</span></footer>
+      </div>
+    </section>
+
     <section class="tv-scene tv-announcement-scene" data-scene="announcement" aria-label="Event announcement">
       <div class="tv-announcement-background" aria-hidden="true">
         <span class="announcement-orb orb-one"></span>
@@ -79,12 +89,15 @@
         <span class="announcement-line line-one"></span>
         <span class="announcement-line line-two"></span>
       </div>
-      <article class="tv-announcement-card">
-        <div class="tv-announcement-mark" aria-hidden="true"><span></span><span></span><span></span></div>
-        <p id="tvAnnouncementEyebrow" class="tv-announcement-eyebrow">EVENT UPDATE</p>
-        <h1 id="tvAnnouncementTitle">Friendship Run Update</h1>
-        <p id="tvAnnouncementBody" class="tv-announcement-body">Important event information will appear here.</p>
-        <footer><span>SUNWAY PRE-U FRIENDSHIP RUN</span><span>15 AUGUST 2026</span></footer>
+      <article class="tv-announcement-card" id="tvAnnouncementCard">
+        <div class="tv-announcement-media" id="tvAnnouncementMedia" hidden><img id="tvAnnouncementImage" alt="" /></div>
+        <div class="tv-announcement-content">
+          <div class="tv-announcement-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+          <p id="tvAnnouncementEyebrow" class="tv-announcement-eyebrow">EVENT UPDATE</p>
+          <h1 id="tvAnnouncementTitle">Friendship Run Update</h1>
+          <p id="tvAnnouncementBody" class="tv-announcement-body">Important event information will appear here.</p>
+          <footer><span>SUNWAY PRE-U FRIENDSHIP RUN</span><span>15 AUGUST 2026</span></footer>
+        </div>
       </article>
     </section>
 
@@ -94,7 +107,7 @@
         <p>Hydration and first-aid stations are marked along the route.</p>
       </header>
       <div class="tv-map-frame">
-        <img src="/assets/friendship-run-route-map.jpeg" alt="Sunway Pre-U Friendship Run 2026 route map" />
+        <img src="/assets/friendship-run-route-map.png" alt="Sunway Pre-U Friendship Run 2026 route map" />
       </div>
       <footer class="tv-map-footer"><span>15 AUGUST 2026</span><span>08:00 AM · SUNWAY COLLEGE</span></footer>
     </section>
@@ -102,6 +115,6 @@
     <div class="tv-scene-progress" aria-hidden="true"><span id="sceneProgress"></span></div>
   </main>
 
-  <script src="/friendship-run-leaderboard.js?v=63"></script>
+  <script src="/friendship-run-leaderboard.js?v=64"></script>
 </body>
 </html>

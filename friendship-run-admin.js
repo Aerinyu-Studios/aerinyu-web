@@ -1,6 +1,8 @@
 const $ = selector => document.querySelector(selector);
 let adminKey = sessionStorage.getItem('friendship_run_admin_key') || '';
 let entries = [], payments = [], totals = {}, displaySettings = {}, announcements = [];
+let announcementImageData = null;
+let announcementRemoveImage = false;
 const esc = (value='') => String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 
 async function api(path='',options={}){
@@ -32,16 +34,15 @@ function renderPlayers(){
 
 function renderPayments(){
   const query=$('#adminSearch').value.trim().toLowerCase();
-  const filtered=payments.filter(p=>`${p.student_id} ${p.play_code} ${p.status}`.toLowerCase().includes(query));
-  $('#adminPayments').innerHTML=filtered.length?filtered.map(p=>`<article class="panel payment-entry" data-payment-id="${p.id}">
-    <a class="payment-proof" href="${esc(p.proof_url||'#')}" target="_blank" rel="noopener">${p.proof_url?`<img src="${esc(p.proof_url)}" alt="Payment proof">`:'Proof unavailable'}</a>
-    <div class="payment-info"><strong>${esc(p.student_id)}</strong><span>Code <b>${esc(p.play_code)}</b></span><small>${new Date(p.created_at).toLocaleString()}</small></div>
-    <div class="fr-admin-meta"><span>${esc(p.status)}</span><span>Score <b>${p.score??'-'}</b></span></div>
-    <div class="fr-admin-actions"><button class="button secondary" data-regenerate>New code</button><button class="button secondary" data-revoke>${p.status==='revoked'?'Restore':'Revoke'}</button><button class="button danger" data-delete-payment>Delete</button></div>
+  const filtered=payments.filter(p=>`${p.student_id} ${p.play_code} ${p.status} ${p.operator_name||''}`.toLowerCase().includes(query));
+  $('#adminPayments').innerHTML=filtered.length?filtered.slice(0,160).map(p=>`<article class="panel payment-entry" data-payment-id="${p.id}">
+    <a class="payment-proof" href="${esc(p.proof_url||'#')}" target="_blank" rel="noopener">${p.proof_url?`<img src="${esc(p.proof_url)}" alt="Payment proof">`:'No proof required'}</a>
+    <div class="payment-info"><strong>${esc(p.student_id)}</strong><span>Code <b>${esc(p.play_code)}</b> · Booth ${Number(p.booth_id||1)}</span><small>${new Date(p.created_at).toLocaleString()} · ${esc(p.operator_name||'Unknown staff')}</small></div>
+    <div class="fr-admin-meta"><span>${esc(p.status)}</span><span>${esc(p.attempt_type==='trial'?'Free trial':p.eligibility_source==='run_signup'?'Run signup':p.payment_method||'Payment')}</span><span>MYR ${Number(p.amount_collected||0).toFixed(0)}</span></div>
+    <div class="fr-admin-actions"><button class="button secondary" data-regenerate>New code</button><button class="button secondary" data-revoke>${p.status==='revoked'?'Restore':'Revoke'}</button></div>
   </article>`).join(''):'<p class="empty-copy">No matching payment records.</p>';
   document.querySelectorAll('[data-regenerate]').forEach(b=>b.onclick=regeneratePayment);
   document.querySelectorAll('[data-revoke]').forEach(b=>b.onclick=togglePayment);
-  document.querySelectorAll('[data-delete-payment]').forEach(b=>b.onclick=deletePayment);
 }
 
 function setText(selector,value){const el=$(selector);if(el)el.textContent=value;}
@@ -65,11 +66,14 @@ function renderDisplaySettings(){
   $('#leaderboardDuration').value=Math.round(Number(settings.leaderboard_duration_ms||12000)/1000);
   $('#mapDuration').value=Math.round(Number(settings.map_duration_ms||9000)/1000);
   $('#announcementDuration').value=Math.round(Number(settings.announcement_duration_ms||9000)/1000);
+  $('#liveGameBooth1').checked=settings.live_game_booth_1_enabled!==false;
+  $('#liveGameBooth2').checked=settings.live_game_booth_2_enabled!==false;
 }
 
 function renderAnnouncements(){
   setText('#announcementCount',announcements.length);
   $('#adminAnnouncements').innerHTML=announcements.length?announcements.map(item=>`<article class="admin-announcement-card ${item.is_active?'is-active':'is-paused'}" data-announcement-id="${item.id}">
+    ${item.image_url?`<img class="admin-announcement-thumb" src="${esc(item.image_url)}" alt="">`:''}
     <div class="admin-announcement-status"><i></i><span>${item.is_active?'Live':'Hidden'}</span></div>
     <small>${esc(item.eyebrow||'EVENT UPDATE')}</small>
     <h4>${esc(item.title)}</h4>
@@ -84,9 +88,9 @@ function renderAnnouncements(){
 
 function render(){renderStats();renderDisplaySettings();renderAnnouncements();renderPlayers();renderPayments();}
 async function load(){
-  const [data, displayData] = await Promise.all([api(), displayApi()]);
+  const data = await api();
   entries=data.entries||[];payments=data.payments||[];totals=data.totals||{};
-  displaySettings=displayData.display_settings||{};announcements=displayData.announcements||[];
+  displaySettings=data.display_settings||{};announcements=data.announcements||[];
   render();
 }
 
@@ -98,6 +102,10 @@ function resetAnnouncementForm(){
   $('#announcementActive').checked=true;
   $('#announcementFormTitle').textContent='Add announcement';
   $('#announcementMessage').textContent='';
+  announcementImageData=null;announcementRemoveImage=false;
+  $('#announcementImage').value='';$('#announcementImageAlt').value='';
+  $('#announcementImagePreviewImg').hidden=true;$('#announcementImagePreviewImg').removeAttribute('src');
+  $('#announcementImagePreview span').hidden=false;
 }
 
 function editAnnouncement(event){
@@ -110,6 +118,9 @@ function editAnnouncement(event){
   $('#announcementOrder').value=Number(item.sort_order||0);
   $('#announcementSeconds').value=item.duration_ms?Math.round(item.duration_ms/1000):'';
   $('#announcementActive').checked=Boolean(item.is_active);
+  $('#announcementImageAlt').value=item.image_alt||'';
+  announcementImageData=null;announcementRemoveImage=false;
+  if(item.image_url){$('#announcementImagePreviewImg').src=item.image_url;$('#announcementImagePreviewImg').hidden=false;$('#announcementImagePreview span').hidden=true}else{$('#announcementImagePreviewImg').hidden=true;$('#announcementImagePreview span').hidden=false}
   $('#announcementFormTitle').textContent='Edit announcement';
   $('#announcementForm').scrollIntoView({behavior:'smooth',block:'center'});
 }
@@ -134,7 +145,7 @@ async function deletePayment(e){const id=e.target.closest('[data-payment-id]').d
 $('#displaySettingsForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const message=$('#displaySettingsMessage');message.textContent='Applying...';
   try{
-    const payload={display_mode:$('#displayMode').value,logo_duration_ms:Number($('#logoDuration').value)*1000,leaderboard_duration_ms:Number($('#leaderboardDuration').value)*1000,map_duration_ms:Number($('#mapDuration').value)*1000,announcement_duration_ms:Number($('#announcementDuration').value)*1000};
+    const payload={display_mode:$('#displayMode').value,logo_duration_ms:Number($('#logoDuration').value)*1000,leaderboard_duration_ms:Number($('#leaderboardDuration').value)*1000,map_duration_ms:Number($('#mapDuration').value)*1000,announcement_duration_ms:Number($('#announcementDuration').value)*1000,live_game_booth_1_enabled:$('#liveGameBooth1').checked,live_game_booth_2_enabled:$('#liveGameBooth2').checked};
     const data=await displayApi('?type=display-settings',{method:'PATCH',body:JSON.stringify(payload)});displaySettings=data.settings;renderDisplaySettings();message.textContent='TV display updated.';
   }catch(error){message.textContent=error.message}
 });
@@ -142,8 +153,23 @@ $('#displaySettingsForm')?.addEventListener('submit',async event=>{
 $('#announcementForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const id=$('#announcementId').value;const message=$('#announcementMessage');message.textContent='Saving...';
   const seconds=$('#announcementSeconds').value;
-  const payload={eyebrow:$('#announcementEyebrow').value,title:$('#announcementTitle').value,body:$('#announcementBody').value,sort_order:Number($('#announcementOrder').value||0),duration_ms:seconds?Number(seconds)*1000:null,is_active:$('#announcementActive').checked};
+  const payload={eyebrow:$('#announcementEyebrow').value,title:$('#announcementTitle').value,body:$('#announcementBody').value,sort_order:Number($('#announcementOrder').value||0),duration_ms:seconds?Number(seconds)*1000:null,is_active:$('#announcementActive').checked,image_alt:$('#announcementImageAlt').value,image_data:announcementImageData,remove_image:announcementRemoveImage};
   try{await displayApi(id?`?type=announcement&id=${id}`:'?type=announcement',{method:id?'PATCH':'POST',body:JSON.stringify(payload)});resetAnnouncementForm();await load();}catch(error){message.textContent=error.message}
+});
+$('#announcementImage')?.addEventListener('change', event=>{
+  const file=event.target.files?.[0];
+  if(!file) return;
+  if(file.size>3*1024*1024){$('#announcementMessage').textContent='Image must be 3 MB or smaller.';event.target.value='';return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    announcementImageData=String(reader.result||'');announcementRemoveImage=false;
+    $('#announcementImagePreviewImg').src=announcementImageData;$('#announcementImagePreviewImg').hidden=false;$('#announcementImagePreview span').hidden=true;
+  };
+  reader.readAsDataURL(file);
+});
+$('#removeAnnouncementImage')?.addEventListener('click',()=>{
+  announcementImageData=null;announcementRemoveImage=true;$('#announcementImage').value='';
+  $('#announcementImagePreviewImg').hidden=true;$('#announcementImagePreviewImg').removeAttribute('src');$('#announcementImagePreview span').hidden=false;
 });
 $('#announcementReset')?.addEventListener('click',resetAnnouncementForm);
 

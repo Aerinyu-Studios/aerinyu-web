@@ -8,8 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=56" />
-    <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="/friendship-run.css?v=64" />
 </head>
 <body class="booth-page">
   <main class="booth-shell">
@@ -36,7 +35,11 @@
     <section class="booth-dashboard" id="boothWorkspace" hidden>
       <div class="booth-session-bar panel">
         <div><span class="section-label">SIGNED IN</span><strong id="operatorName">Staff member</strong></div>
-        <button id="boothLogout" class="text-button" type="button">Sign out</button>
+        <div class="booth-station-control" aria-label="Booth station">
+          <span>Recording for</span>
+          <div class="booth-station-switch"><button type="button" data-booth-station="1">Booth 1</button><button type="button" data-booth-station="2">Booth 2</button></div>
+        </div>
+        <div class="booth-session-actions"><a href="/friendship-run/audit" class="text-button" target="_blank">Open audit</a><button id="boothLogout" class="text-button" type="button">Sign out</button></div>
       </div>
 
       <section class="booth-stats" aria-label="Booth audit totals">
@@ -50,7 +53,7 @@
       <div class="booth-main-grid">
         <section class="panel booth-form-card">
           <div class="booth-form-heading">
-            <div><span class="section-label">ISSUE A CODE</span><h2>New player access</h2></div>
+            <div><span class="section-label">ISSUE A CODE · <b id="formBoothLabel">BOOTH 1</b></span><h2>New player access</h2></div>
             <p>Choose the attempt type first. The form will only ask for the evidence that is actually needed.</p>
           </div>
 
@@ -136,6 +139,6 @@
     </div>
   </dialog>
   <canvas id="proofCanvas" width="1280" height="960" hidden></canvas>
-  <script src="/friendship-run-booth.js?v=56"></script>
+  <script src="/friendship-run-booth.js?v=64"></script>
 </body>
 </html>

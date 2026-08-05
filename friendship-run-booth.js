@@ -3,6 +3,9 @@ let boothToken = sessionStorage.getItem('friendship_run_booth_token') || '';
 let operator = JSON.parse(sessionStorage.getItem('friendship_run_booth_operator') || 'null');
 let proofData = null;
 let stream = null;
+const queryBooth = Number(new URLSearchParams(location.search).get('booth') || new URLSearchParams(location.search).get('station'));
+let boothId = [1,2].includes(queryBooth) ? queryBooth : Number(localStorage.getItem('friendship_run_booth_station') || 1);
+if (![1,2].includes(boothId)) boothId = 1;
 
 async function call(path, options = {}) {
   const response = await fetch(`/api/friendship-run/${path}`, {
@@ -28,10 +31,23 @@ function logout(reload = true) {
   if (reload) location.reload();
 }
 
+function updateBoothStationUI(){
+  document.querySelectorAll('[data-booth-station]').forEach(button=>button.classList.toggle('is-active',Number(button.dataset.boothStation)===boothId));
+  if($('#formBoothLabel')) $('#formBoothLabel').textContent=`BOOTH ${boothId}`;
+}
+
+function setBoothStation(id){
+  boothId=[1,2].includes(Number(id))?Number(id):1;
+  localStorage.setItem('friendship_run_booth_station',String(boothId));
+  updateBoothStationUI();
+  refreshSummary();
+}
+
 function showWorkspace() {
   $('#boothAuth').hidden = true;
   $('#boothWorkspace').hidden = false;
   $('#operatorName').textContent = operator?.name || 'Staff member';
+  updateBoothStationUI();
   refreshSummary();
 }
 
@@ -136,11 +152,11 @@ $('#paymentForm').addEventListener('submit', async (event) => {
     const paymentMethod=eligibilitySource==='booth_payment'?selected('paymentMethod'):eligibilitySource==='run_signup'?'run_signup':'none';
     const data=await call('payment-create',{method:'POST',body:JSON.stringify({
       student_id:$('#paymentStudentId').value.trim(),attempt_type:attemptType,eligibility_source:eligibilitySource,
-      payment_method:paymentMethod,proof_data:proofData,note:$('#auditNote').value.trim()
+      payment_method:paymentMethod,proof_data:proofData,note:$('#auditNote').value.trim(),booth_id:boothId
     })});
     const payment=data.payment;
     $('#generatedCode').textContent=payment.play_code;
-    $('#codeStudent').textContent=`Student ID: ${payment.student_id}`;
+    $('#codeStudent').textContent=`Booth ${payment.booth_id} · Student ID: ${payment.student_id}`;
     $('#codeType').textContent=payment.attempt_type==='trial'?'FREE TRIAL':payment.eligibility_source==='run_signup'?'OFFICIAL · RUN SIGNUP':'OFFICIAL · BOOTH PAYMENT';
     $('#codeDescription').textContent=payment.attempt_type==='trial'?'Practice only — this score will not enter the leaderboard.':'Valid for 30 minutes and usable once.';
     $('#codeEmpty').hidden=true;$('#codeResult').hidden=false;message.textContent='';
@@ -166,7 +182,7 @@ function money(value){return `MYR ${Number(value||0).toFixed(0)}`}
 function escapeHtml(value=''){return String(value).replace(/[&<>"']/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function refreshSummary(){
   try{
-    const data=await call('booth-summary');
+    const data=await call(`booth-summary?booth=${boothId}`);
     const t=data.totals||{};
     $('#fundsTotal').textContent=money(t.funds_collected);$('#cashTotal').textContent=money(t.cash_collected);$('#digitalTotal').textContent=money(t.digital_collected);
     $('#cashCount').textContent=`${(data.recent||[]).filter(r=>r.payment_method==='cash').length} recent cash records`;
@@ -179,6 +195,7 @@ async function refreshSummary(){
     }).join(''):'<tr><td colspan="7">No booth activity yet.</td></tr>';
   }catch(error){$('#auditRows').innerHTML=`<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`}
 }
+document.querySelectorAll('[data-booth-station]').forEach(button=>button.addEventListener('click',()=>setBoothStation(button.dataset.boothStation)));
 $('#refreshAudit').addEventListener('click',refreshSummary);
 
 if (boothToken && operator) showWorkspace();

@@ -8,15 +8,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=61" />
-  <link rel="stylesheet" href="/friendship-run-admin-display.css?v=61" />
-  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="stylesheet" href="/friendship-run.css?v=64" />
+  <link rel="stylesheet" href="/friendship-run-admin-display.css?v=64" />
 </head>
 <body class="fr-admin-page">
   <main class="fr-admin-shell">
     <header class="fr-admin-header">
       <div><p class="section-label">PRIVATE EVENT CONTROL</p><h1>Friendship Run Admin</h1></div>
-      <a href="/friendship-run/leaderboard" target="_blank" class="button secondary">Open TV display</a>
+      <div class="fr-admin-header-actions">
+        <a href="/friendship-run/audit" target="_blank" class="button secondary">Open audit</a>
+        <a href="/friendship-run/leaderboard1" target="_blank" class="button secondary">TV · Booth 1</a>
+        <a href="/friendship-run/leaderboard2" target="_blank" class="button secondary">TV · Booth 2</a>
+      </div>
     </header>
 
     <section class="panel fr-admin-auth" id="adminAuth">
@@ -61,6 +64,10 @@
             <label><span>Map seconds</span><input id="mapDuration" type="number" min="1" max="120" step="1"></label>
             <label><span>Default message seconds</span><input id="announcementDuration" type="number" min="1" max="120" step="1"></label>
           </div>
+          <div class="live-game-toggle-grid">
+            <label class="admin-check live-game-toggle"><input id="liveGameBooth1" type="checkbox" checked><span><strong>Booth 1 live game</strong><small>Allow opted-in rounds to interrupt TV 1.</small></span></label>
+            <label class="admin-check live-game-toggle"><input id="liveGameBooth2" type="checkbox" checked><span><strong>Booth 2 live game</strong><small>Allow opted-in rounds to interrupt TV 2.</small></span></label>
+          </div>
           <div class="admin-display-actions"><button class="button primary" type="submit">Apply TV settings</button><p class="message" id="displaySettingsMessage"></p></div>
         </form>
 
@@ -71,6 +78,15 @@
             <label><span>Small heading</span><input id="announcementEyebrow" maxlength="50" value="EVENT UPDATE" required></label>
             <label><span>Title</span><input id="announcementTitle" maxlength="100" placeholder="Hydration station update" required></label>
             <label><span>Message</span><textarea id="announcementBody" maxlength="500" rows="5" placeholder="Enter the announcement shown on the TV display." required></textarea></label>
+            <div class="announcement-image-editor">
+              <div id="announcementImagePreview" class="announcement-image-preview"><span>No image selected</span><img id="announcementImagePreviewImg" alt="" hidden></div>
+              <div class="announcement-image-actions">
+                <label class="button secondary file-button"><input id="announcementImage" type="file" accept="image/jpeg,image/png,image/webp">Choose image</label>
+                <button id="removeAnnouncementImage" class="button ghost" type="button">Remove image</button>
+                <small>Optional · JPG, PNG or WebP · maximum 3 MB</small>
+              </div>
+            </div>
+            <label><span>Image description <small>(optional)</small></span><input id="announcementImageAlt" maxlength="120" placeholder="Describe the image for accessibility"></label>
             <div class="announcement-editor-row">
               <label><span>Order</span><input id="announcementOrder" type="number" value="0" step="1"></label>
               <label><span>Seconds (optional)</span><input id="announcementSeconds" type="number" min="1" max="120" step="1" placeholder="Default"></label>
@@ -101,6 +117,6 @@
       <div id="adminPayments" class="fr-admin-list payment-list"></div>
     </section>
   </main>
-  <script src="/friendship-run-admin.js?v=61"></script>
+  <script src="/friendship-run-admin.js?v=64"></script>
 </body>
 </html>
