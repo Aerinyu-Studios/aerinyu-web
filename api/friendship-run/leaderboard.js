@@ -3,7 +3,7 @@ import { access, friendlyDatabaseError, getSupabase, json } from '../../lib/frie
 const fallbackSettings = {
   id:1, display_mode:'cycle', logo_duration_ms:3200, leaderboard_duration_ms:12000,
   map_duration_ms:9000, announcement_duration_ms:9000,
-  live_game_booth_1_enabled:true, live_trial_booth_1_enabled:true, live_game_booth_2_enabled:true, live_trial_booth_2_enabled:true
+  live_game_booth_1_enabled:true, live_trial_booth_1_enabled:true, live_game_booth_2_enabled:true, live_trial_booth_2_enabled:true, show_live_sync_status:false
 };
 
 export default async function handler(req,res){

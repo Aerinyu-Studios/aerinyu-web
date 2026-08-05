@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/friendship-run.css?v=66" />
+  <link rel="stylesheet" href="/friendship-run.css?v=65" />
   <link rel="stylesheet" href="/friendship-run-admin-display.css?v=64" />
 </head>
 <body class="fr-admin-page">
@@ -65,10 +65,11 @@
             <label><span>Default message seconds</span><input id="announcementDuration" type="number" min="1" max="120" step="1"></label>
           </div>
           <div class="live-game-toggle-grid">
-            <label class="admin-check live-game-toggle"><input id="liveGameBooth1" type="checkbox" checked><span><strong>Booth 1 live games</strong><small>Allow opted-in official rounds to interrupt TV 1.</small></span></label>
-            <label class="admin-check live-game-toggle"><input id="liveTrialBooth1" type="checkbox" checked><span><strong>Booth 1 free trials</strong><small>Also allow opted-in practice rounds on TV 1.</small></span></label>
-            <label class="admin-check live-game-toggle"><input id="liveGameBooth2" type="checkbox" checked><span><strong>Booth 2 live games</strong><small>Allow opted-in official rounds to interrupt TV 2.</small></span></label>
-            <label class="admin-check live-game-toggle"><input id="liveTrialBooth2" type="checkbox" checked><span><strong>Booth 2 free trials</strong><small>Also allow opted-in practice rounds on TV 2.</small></span></label>
+            <label class="admin-check live-game-toggle"><input id="liveGameBooth1" type="checkbox" checked><span><strong>Booth 1 official games</strong><small>Allow opted-in official attempts to interrupt TV 1.</small></span></label>
+            <label class="admin-check live-game-toggle"><input id="liveTrialBooth1" type="checkbox" checked><span><strong>Booth 1 free trials</strong><small>Allow opted-in practice rounds to interrupt TV 1.</small></span></label>
+            <label class="admin-check live-game-toggle"><input id="liveGameBooth2" type="checkbox" checked><span><strong>Booth 2 official games</strong><small>Allow opted-in official attempts to interrupt TV 2.</small></span></label>
+            <label class="admin-check live-game-toggle"><input id="liveTrialBooth2" type="checkbox" checked><span><strong>Booth 2 free trials</strong><small>Allow opted-in practice rounds to interrupt TV 2.</small></span></label>
+            <label class="admin-check live-game-toggle technical-status-toggle"><input id="showLiveSyncStatus" type="checkbox"><span><strong>Show technical live-sync status</strong><small>Displays labels such as “LIVE SYNC READY”, connection errors and API fallback on the TV. Leave this off for guests.</small></span></label>
           </div>
           <div class="admin-display-actions"><button class="button primary" type="submit">Apply TV settings</button><p class="message" id="displaySettingsMessage"></p></div>
         </form>
@@ -119,6 +120,6 @@
       <div id="adminPayments" class="fr-admin-list payment-list"></div>
     </section>
   </main>
-  <script src="/friendship-run-admin.js?v=64"></script>
+  <script src="/friendship-run-admin.js?v=78"></script>
 </body>
 </html>
