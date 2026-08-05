@@ -49,26 +49,8 @@ function readableRealtimeError(error, fallback='Realtime connection failed.'){
   return error.message || error.error || error.reason || fallback;
 }
 
-// WebRTC provides the lowest-latency peer-to-peer game feed.
-// Supabase Realtime remains the signalling path and fallback.
-const rtcViewerId = sessionStorage.getItem(`friendship_run_rtc_viewer_${boothId}`) ||
-  (globalThis.crypto?.randomUUID?.() || `viewer-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-sessionStorage.setItem(`friendship_run_rtc_viewer_${boothId}`, rtcViewerId);
-let rtcPeer = null;
-let rtcDataChannel = null;
-let rtcPendingIce = [];
-let rtcReadyTimer = null;
-let rtcLastMessageAt = 0;
-let rtcMediaActive = false;
-let rtcConfig = {
-  iceServers: [
-    {urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']}
-  ],
-  iceCandidatePoolSize: 4,
-  bundlePolicy: 'max-bundle',
-  rtcpMuxPolicy: 'require'
-};
-
+// Supabase Realtime Broadcast is the primary live feed.
+// The API endpoint is only used to recover a missed start or stale session.
 function wait(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
 
 function ensureSupabaseBrowserClient(){
@@ -95,7 +77,6 @@ function ensureSupabaseBrowserClient(){
 }
 const liveCanvas = document.querySelector('#liveGameCanvas');
 const liveCtx = liveCanvas?.getContext('2d');
-const liveVideo = document.querySelector('#liveGameVideo');
 const liveTransport = document.querySelector('#liveGameTransport');
 
 function initLogoFallback(){
@@ -331,179 +312,14 @@ function showScene(key){
 }
 
 
-function signalRealtime(event, payload){
-  if(!realtimeSubscribed || !realtimeChannel) return;
-  realtimeChannel.send({type:'broadcast', event, payload}).catch(()=>{});
-}
-
-function setLiveTransport(label, mode='fallback', detail=''){
+function setLiveTransport(label, mode='realtime', detail=''){
   if(!liveTransport) return;
   liveTransport.textContent=label;
   liveTransport.dataset.mode=mode;
   liveTransport.title=detail || realtimeDebug.error || '';
 }
 
-function useCanvasFallback(){
-  rtcMediaActive=false;
-  if(liveVideo){
-    try{liveVideo.pause();}catch{}
-    liveVideo.srcObject=null;
-    liveVideo.hidden=true;
-  }
-  if(liveCanvas) liveCanvas.hidden=false;
-}
-
-function closeViewerPeer(){
-  clearInterval(rtcReadyTimer);
-  rtcReadyTimer = null;
-  try{rtcDataChannel?.close();}catch{}
-  try{rtcPeer?.close();}catch{}
-  rtcDataChannel = null;
-  rtcPeer = null;
-  rtcPendingIce = [];
-  useCanvasFallback();
-  setLiveTransport(realtimeSubscribed?'REALTIME BACKUP':'CONNECTING','fallback');
-}
-
-function sendViewerReady(){
-  if(!realtimeSubscribed || rtcDataChannel?.readyState === 'open') return;
-  signalRealtime('viewer-ready',{
-    booth_id: boothId,
-    viewer_id: rtcViewerId,
-    requested_at: Date.now()
-  });
-}
-
-function startViewerReadyLoop(){
-  clearInterval(rtcReadyTimer);
-  sendViewerReady();
-  rtcReadyTimer = setInterval(sendViewerReady, 400);
-}
-
-async function addViewerIce(candidate){
-  if(!candidate) return;
-  if(rtcPeer?.remoteDescription){
-    try{await rtcPeer.addIceCandidate(candidate);}catch{}
-  }else{
-    rtcPendingIce.push(candidate);
-  }
-}
-
-async function flushViewerIce(){
-  const queued = rtcPendingIce.splice(0);
-  for(const candidate of queued){
-    try{await rtcPeer?.addIceCandidate(candidate);}catch{}
-  }
-}
-
-function attachDataChannel(channel){
-  rtcDataChannel = channel;
-  channel.binaryType = 'arraybuffer';
-  channel.addEventListener('open',()=>{
-    clearInterval(rtcReadyTimer);
-    rtcReadyTimer = null;
-    setLiveTransport(rtcMediaActive?'P2P VIDEO':'P2P DATA','p2p');
-  });
-  channel.addEventListener('message',event=>{
-    try{
-      const game = JSON.parse(typeof event.data === 'string' ? event.data : new TextDecoder().decode(event.data));
-      rtcLastMessageAt = Date.now();
-      handleRealtimeGame(game);
-    }catch{}
-  });
-  channel.addEventListener('close',()=>{
-    if(rtcDataChannel === channel){
-      rtcDataChannel = null;
-      startViewerReadyLoop();
-    }
-  });
-  channel.addEventListener('error',()=>{});
-}
-
-async function handleWebRtcOffer(message){
-  const data = message?.payload || message;
-  if(!data || Number(data.booth_id)!==boothId) return;
-  if(String(data.viewer_id||'')!==rtcViewerId || !data.sdp) return;
-
-  const queuedBeforeOffer = rtcPendingIce;
-  closeViewerPeer();
-  rtcPendingIce = queuedBeforeOffer;
-
-  const pc = new RTCPeerConnection(rtcConfig);
-  rtcPeer = pc;
-
-  pc.addEventListener('datachannel',event=>attachDataChannel(event.channel));
-  pc.addEventListener('track',event=>{
-    const stream=event.streams?.[0];
-    if(!stream||!liveVideo) return;
-    liveVideo.srcObject=stream;
-    liveVideo.hidden=false;
-    if(liveCanvas) liveCanvas.hidden=true;
-    rtcMediaActive=true;
-    setLiveTransport('P2P VIDEO','p2p');
-    liveVideo.play().catch(()=>{});
-  });
-  pc.addEventListener('icecandidate',event=>{
-    if(!event.candidate) return;
-    signalRealtime('webrtc-ice',{
-      booth_id: boothId,
-      session_id: data.session_id,
-      viewer_id: rtcViewerId,
-      role: 'viewer',
-      candidate: event.candidate.toJSON?.() || event.candidate
-    });
-  });
-  pc.addEventListener('connectionstatechange',()=>{
-    if(['failed','closed'].includes(pc.connectionState)){
-      if(rtcPeer===pc){
-        closeViewerPeer();
-        startViewerReadyLoop();
-      }
-    }
-    if(pc.connectionState==='disconnected'){
-      setTimeout(()=>{
-        if(pc.connectionState==='disconnected' && rtcPeer===pc){
-          closeViewerPeer();
-          startViewerReadyLoop();
-        }
-      },2500);
-    }
-  });
-
-  try{
-    await pc.setRemoteDescription(data.sdp);
-    await flushViewerIce();
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    signalRealtime('webrtc-answer',{
-      booth_id: boothId,
-      session_id: data.session_id,
-      viewer_id: rtcViewerId,
-      sdp: pc.localDescription
-    });
-  }catch{
-    if(rtcPeer===pc){
-      closeViewerPeer();
-      startViewerReadyLoop();
-    }
-  }
-}
-
-function handleWebRtcIce(message){
-  const data = message?.payload || message;
-  if(!data || Number(data.booth_id)!==boothId) return;
-  if(String(data.viewer_id||'')!==rtcViewerId || data.role!=='publisher') return;
-  addViewerIce(data.candidate).catch(()=>{});
-}
-
-function handlePublisherReady(message){
-  const data = message?.payload || message;
-  if(!data || Number(data.booth_id)!==boothId) return;
-  if(rtcDataChannel?.readyState!=='open') sendViewerReady();
-}
-
 async function removeRealtimeChannel(){
-  closeViewerPeer();
   realtimeSubscribed=false;
   const channel=realtimeChannel;
   realtimeChannel=null;
@@ -530,7 +346,7 @@ function handleRealtimeGame(message){
   if(Number.isFinite(frameNumber)&&frameNumber<=lastRealtimeFrameNumber) return;
   if(Number.isFinite(frameNumber)) lastRealtimeFrameNumber=frameNumber;
   lastRealtimeReceivedAt=Date.now();
-  if(!rtcMediaActive && rtcDataChannel?.readyState!=='open') setLiveTransport('REALTIME','realtime');
+  setLiveTransport('LIVE SYNC','realtime');
 
   if(game.active===false){
     if(!currentLiveGame?.session_id||!game.session_id||currentLiveGame.session_id===game.session_id) stopLiveGame();
@@ -599,41 +415,45 @@ async function initRealtimeChannel(){
       setLiveTransport('CONFIG ERROR','error',realtimeDebug.error);
       return false;
     }
+
     updateRealtimeDebug({stage:'connecting',config:config.diagnostics||{}});
-    if(Array.isArray(config.ice_servers)&&config.ice_servers.length){
-      rtcConfig={...rtcConfig,iceServers:config.ice_servers};
-    }
     realtimeClient=supabaseBrowser.createClient(config.supabase_url,config.supabase_publishable_key,{
       auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
-      realtime:{params:{eventsPerSecond:60}}
+      realtime:{params:{eventsPerSecond:100}}
     });
-    const channel=realtimeClient.channel(config.topic,{config:{private:false,broadcast:{ack:false,self:true}}});
+    const channel=realtimeClient.channel(config.topic,{
+      config:{private:false,broadcast:{ack:false,self:true}}
+    });
     realtimeChannel=channel;
     channel
       .on('broadcast',{event:'realtime-health'},handleRealtimeHealth)
-      .on('broadcast',{event:'game-state'},handleRealtimeGame)
-      .on('broadcast',{event:'publisher-ready'},handlePublisherReady)
-      .on('broadcast',{event:'webrtc-offer'},message=>{handleWebRtcOffer(message).catch(()=>{});})
-      .on('broadcast',{event:'webrtc-ice'},handleWebRtcIce);
+      .on('broadcast',{event:'game-frame'},handleRealtimeGame);
 
     return await new Promise(resolve=>{
       let settled=false;
-      const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(false);}},5000);
+      const timeout=setTimeout(()=>{
+        if(!settled){
+          settled=true;
+          updateRealtimeDebug({stage:'subscription-timeout',status:'TIMED_OUT',error:'Realtime subscription timed out.'});
+          setLiveTransport('API BACKUP','fallback',realtimeDebug.error);
+          resolve(false);
+        }
+      },5000);
+
       channel.subscribe((status,error)=>{
         updateRealtimeDebug({stage:'subscription',status,error:readableRealtimeError(error,'')});
         if(status==='SUBSCRIBED'){
           realtimeSubscribed=true;
-          updateRealtimeDebug({stage:'subscribed',status,subscribed_at:new Date().toISOString(),error:''});
-          setLiveTransport('REALTIME CHECK','connecting');
           clearTimeout(timeout);
+          updateRealtimeDebug({stage:'subscribed',status,subscribed_at:new Date().toISOString(),error:''});
+          setLiveTransport('LIVE SYNC READY','realtime');
           runRealtimeHealthCheck();
-          startViewerReadyLoop();
           if(!settled){settled=true;resolve(true);}
         }else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){
           realtimeSubscribed=false;
           const detail=readableRealtimeError(error,`Supabase channel status: ${status}`);
           updateRealtimeDebug({stage:'subscription-error',status,error:detail});
-          setLiveTransport(status==='TIMED_OUT'?'REALTIME TIMEOUT':'REALTIME ERROR','error',detail);
+          setLiveTransport('API BACKUP','fallback',detail);
           if(!settled&&status!=='CLOSED'){
             clearTimeout(timeout);
             settled=true;
@@ -684,7 +504,7 @@ function showLiveGame(game){
   $('#liveGameProgramme').textContent=`${game.programme||'Snake Challenge'}${game.attempt_type==='trial'?' · FREE TRIAL':' · OFFICIAL ATTEMPT'}`;
   $('#liveGameScore').textContent=String(game.score||0);
   $('#liveGameBoothLabel').textContent=`BOOTH ${boothId}`;
-  if(!rtcMediaActive) drawLiveGame(game);
+  drawLiveGame(game);
 }
 
 function scheduleLivePoll(delay){
@@ -693,18 +513,26 @@ function scheduleLivePoll(delay){
 }
 
 async function loadLiveGame(){
-  const peerLive = rtcDataChannel?.readyState==='open' && Date.now()-rtcLastMessageAt<1500;
-  let nextDelay=peerLive?6000:(realtimeSubscribed?900:550);
+  let nextDelay=realtimeSubscribed?5000:1000;
   try{
     const data=await api(`leaderboard?live=1&booth=${boothId}`);
-    const recentRealtime=Math.max(lastRealtimeReceivedAt,rtcLastMessageAt) && Date.now()-Math.max(lastRealtimeReceivedAt,rtcLastMessageAt)<2500;
+    const recentRealtime=lastRealtimeReceivedAt&&Date.now()-lastRealtimeReceivedAt<3000;
     if(data.live_game){
-      if(!recentRealtime){ setLiveTransport('API BACKUP','fallback'); showLiveGame(data.live_game); }
+      // Never overwrite fresh WebSocket frames with slower database snapshots.
+      if(!recentRealtime){
+        setLiveTransport(realtimeSubscribed?'RECOVERED':'API BACKUP',realtimeSubscribed?'realtime':'fallback');
+        showLiveGame(data.live_game);
+      }
     }else if(liveGameActive&&!recentRealtime){
       stopLiveGame();
     }
   }catch(error){
-    if(error.status===401){localStorage.removeItem('friendship_run_tv_access');accessToken='';showGate('Session expired. Enter the event password again.');return;}
+    if(error.status===401){
+      localStorage.removeItem('friendship_run_tv_access');
+      accessToken='';
+      showGate('Session expired. Enter the event password again.');
+      return;
+    }
     nextDelay=2500;
   }
   if(accessToken) scheduleLivePoll(nextDelay);
@@ -718,12 +546,10 @@ function startAutoRefresh(){
   refreshTimer=setInterval(loadLeaderboard,5000);
   configTimer=setInterval(loadDisplayConfig,5000);
   initRealtimeChannel().catch(()=>{});
-  scheduleLivePoll(0);
+  scheduleLivePoll(1500);
   realtimeWatchdogTimer=setInterval(()=>{
-    const freshest=Math.max(lastRealtimeReceivedAt,rtcLastMessageAt);
-    if(liveGameActive&&Date.now()-freshest>4500) loadLiveGame();
     if(!realtimeSubscribed) initRealtimeChannel().catch(()=>{});
-    if(realtimeSubscribed&&rtcDataChannel?.readyState!=='open'&&!rtcReadyTimer) startViewerReadyLoop();
+    if(liveGameActive&&lastRealtimeReceivedAt&&Date.now()-lastRealtimeReceivedAt>3000) loadLiveGame();
   },1000);
 }
 

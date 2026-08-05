@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { access, friendlyDatabaseError, getSupabase, json } from '../../lib/friendship-run.js';
 
 const fallbackSettings = {
@@ -31,22 +30,6 @@ export default async function handler(req,res){
       if(!supabaseUrl||!publishableKey){
         return json(res,503,{error:'Realtime is not configured. Add a public Supabase URL and publishable key in Vercel.'});
       }
-      const secret=String(process.env.FRIENDSHIP_RUN_TOKEN_SECRET||'friendship-run').trim();
-      const suffix=createHmac('sha256',secret).update(`realtime-booth-${boothId}`).digest('hex').slice(0,24);
-
-      const iceServers=[
-        {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}
-      ];
-      const turnUrls=String(process.env.FRIENDSHIP_RUN_TURN_URLS||process.env.FRIENDSHIP_RUN_TURN_URL||'')
-        .split(',').map(value=>value.trim()).filter(Boolean);
-      if(turnUrls.length){
-        iceServers.push({
-          urls:turnUrls,
-          username:String(process.env.FRIENDSHIP_RUN_TURN_USERNAME||'').trim(),
-          credential:String(process.env.FRIENDSHIP_RUN_TURN_CREDENTIAL||'').trim()
-        });
-      }
-
       const urlSource = process.env.NEXT_PUBLIC_SUPABASE_URL ? 'NEXT_PUBLIC_SUPABASE_URL' : (process.env.SUPABASE_URL ? 'SUPABASE_URL' : 'missing');
       const keySource = process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY ? 'SUPABASE_PUBLISHABLE_DEFAULT_KEY' :
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ? 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY' :
@@ -60,9 +43,8 @@ export default async function handler(req,res){
       return json(res,200,{
         supabase_url:supabaseUrl,
         supabase_publishable_key:publishableKey,
-        topic:`friendship-run-live-${boothId}-${suffix}`,
+        topic:`friendship-run-live-${boothId}`,
         booth_id:boothId,
-        ice_servers:iceServers,
         diagnostics:{
           url_source:urlSource,
           key_source:keySource,
