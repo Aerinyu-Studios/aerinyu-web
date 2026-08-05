@@ -29,11 +29,26 @@ export default async function handler(req,res){
       }
       const secret=String(process.env.FRIENDSHIP_RUN_TOKEN_SECRET||'friendship-run').trim();
       const suffix=createHmac('sha256',secret).update(`realtime-booth-${boothId}`).digest('hex').slice(0,24);
+
+      const iceServers=[
+        {urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}
+      ];
+      const turnUrls=String(process.env.FRIENDSHIP_RUN_TURN_URLS||process.env.FRIENDSHIP_RUN_TURN_URL||'')
+        .split(',').map(value=>value.trim()).filter(Boolean);
+      if(turnUrls.length){
+        iceServers.push({
+          urls:turnUrls,
+          username:String(process.env.FRIENDSHIP_RUN_TURN_USERNAME||'').trim(),
+          credential:String(process.env.FRIENDSHIP_RUN_TURN_CREDENTIAL||'').trim()
+        });
+      }
+
       return json(res,200,{
         supabase_url:supabaseUrl,
         supabase_publishable_key:publishableKey,
         topic:`friendship-run-live-${boothId}-${suffix}`,
-        booth_id:boothId
+        booth_id:boothId,
+        ice_servers:iceServers
       });
     }
     if(String(req.query?.display||'')==='1'){

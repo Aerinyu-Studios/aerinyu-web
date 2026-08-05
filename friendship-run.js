@@ -34,6 +34,19 @@ let realtimeTopic = '';
 let realtimeFrameNumber = 0;
 const realtimeSessionId = globalThis.crypto?.randomUUID?.() || `game-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+// WebRTC is the primary transport for the live TV game.
+// Supabase Realtime is retained for signalling and as a fallback.
+const rtcPeers = new Map();
+let rtcPublisherTimer = null;
+let rtcConfig = {
+  iceServers: [
+    {urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']}
+  ],
+  iceCandidatePoolSize: 4,
+  bundlePolicy: 'max-bundle',
+  rtcpMuxPolicy: 'require'
+};
+
 let supabaseLoaderPromise = null;
 
 function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
@@ -328,7 +341,176 @@ function realtimeState(active = true) {
   };
 }
 
+function signalRealtime(event, payload) {
+  if (!realtimeSubscribed || !realtimeChannel) return;
+  realtimeChannel.send({type:'broadcast', event, payload}).catch(() => {});
+}
+
+function closePublisherPeer(viewerId) {
+  const peer = rtcPeers.get(viewerId);
+  if (!peer) return;
+  try { peer.dc?.close(); } catch {}
+  try { peer.pc?.close(); } catch {}
+  rtcPeers.delete(viewerId);
+}
+
+function closeAllPublisherPeers() {
+  clearInterval(rtcPublisherTimer);
+  rtcPublisherTimer = null;
+  for (const viewerId of [...rtcPeers.keys()]) closePublisherPeer(viewerId);
+}
+
+function openPeerCount() {
+  let count = 0;
+  for (const peer of rtcPeers.values()) {
+    if (peer.dc?.readyState === 'open') count++;
+  }
+  return count;
+}
+
+function sendStateToRtcPeers(state) {
+  const payload = JSON.stringify(state);
+  let sent = 0;
+  for (const [viewerId, peer] of rtcPeers) {
+    const dc = peer.dc;
+    if (!dc || dc.readyState !== 'open') continue;
+    // Never queue stale game frames. If the receiver is momentarily busy,
+    // dropping one frame is preferable to adding visible delay.
+    if (dc.bufferedAmount > 32768) continue;
+    try {
+      dc.send(payload);
+      sent++;
+    } catch {
+      closePublisherPeer(viewerId);
+    }
+  }
+  return sent;
+}
+
+async function addPublisherIce(peer, candidate) {
+  if (!candidate) return;
+  if (peer.pc.remoteDescription) {
+    try { await peer.pc.addIceCandidate(candidate); } catch {}
+  } else {
+    peer.pendingIce.push(candidate);
+  }
+}
+
+async function flushPublisherIce(peer) {
+  const queued = peer.pendingIce.splice(0);
+  for (const candidate of queued) {
+    try { await peer.pc.addIceCandidate(candidate); } catch {}
+  }
+}
+
+async function createPublisherPeer(viewerId) {
+  if (!viewerId || !realtimeSubscribed || !realtimeChannel || !liveDisplayRequested) return;
+
+  const existing = rtcPeers.get(viewerId);
+  if (existing && ['new','connecting','connected'].includes(existing.pc.connectionState) && Date.now()-existing.createdAt<3000) {
+    return;
+  }
+  if (existing) closePublisherPeer(viewerId);
+
+  const pc = new RTCPeerConnection(rtcConfig);
+  const dc = pc.createDataChannel('friendship-run-live', {
+    ordered: false,
+    maxRetransmits: 0
+  });
+  dc.binaryType = 'arraybuffer';
+  dc.bufferedAmountLowThreshold = 8192;
+
+  const peer = {pc, dc, pendingIce: [], createdAt: Date.now()};
+  rtcPeers.set(viewerId, peer);
+
+  dc.addEventListener('open', () => {
+    try { dc.send(JSON.stringify(realtimeState(true))); } catch {}
+  });
+  dc.addEventListener('close', () => {
+    if (rtcPeers.get(viewerId) === peer) closePublisherPeer(viewerId);
+  });
+  dc.addEventListener('error', () => {
+    if (rtcPeers.get(viewerId) === peer) closePublisherPeer(viewerId);
+  });
+
+  pc.addEventListener('icecandidate', event => {
+    if (!event.candidate) return;
+    signalRealtime('webrtc-ice', {
+      booth_id: liveBoothId,
+      session_id: realtimeSessionId,
+      viewer_id: viewerId,
+      role: 'publisher',
+      candidate: event.candidate.toJSON?.() || event.candidate
+    });
+  });
+
+  pc.addEventListener('connectionstatechange', () => {
+    if (['failed','closed'].includes(pc.connectionState)) closePublisherPeer(viewerId);
+    if (pc.connectionState === 'disconnected') {
+      setTimeout(() => {
+        if (pc.connectionState === 'disconnected' && rtcPeers.get(viewerId) === peer) {
+          closePublisherPeer(viewerId);
+        }
+      }, 2500);
+    }
+  });
+
+  try {
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    signalRealtime('webrtc-offer', {
+      booth_id: liveBoothId,
+      session_id: realtimeSessionId,
+      viewer_id: viewerId,
+      sdp: pc.localDescription
+    });
+  } catch {
+    closePublisherPeer(viewerId);
+  }
+}
+
+function handleViewerReady(message) {
+  const data = message?.payload || message;
+  if (!data || Number(data.booth_id) !== liveBoothId) return;
+  if (!liveDisplayRequested || !attemptToken) return;
+  createPublisherPeer(String(data.viewer_id || '')).catch(() => {});
+}
+
+async function handleWebRtcAnswer(message) {
+  const data = message?.payload || message;
+  if (!data || Number(data.booth_id) !== liveBoothId) return;
+  if (data.session_id !== realtimeSessionId) return;
+  const viewerId = String(data.viewer_id || '');
+  const peer = rtcPeers.get(viewerId);
+  if (!peer || !data.sdp) return;
+  try {
+    await peer.pc.setRemoteDescription(data.sdp);
+    await flushPublisherIce(peer);
+  } catch {
+    closePublisherPeer(viewerId);
+  }
+}
+
+function handleWebRtcIce(message) {
+  const data = message?.payload || message;
+  if (!data || Number(data.booth_id) !== liveBoothId) return;
+  if (data.session_id !== realtimeSessionId || data.role !== 'viewer') return;
+  const peer = rtcPeers.get(String(data.viewer_id || ''));
+  if (!peer) return;
+  addPublisherIce(peer, data.candidate).catch(() => {});
+}
+
+function announcePublisherReady() {
+  if (!realtimeSubscribed || !liveDisplayRequested || !attemptToken) return;
+  signalRealtime('publisher-ready', {
+    booth_id: liveBoothId,
+    session_id: realtimeSessionId,
+    attempt_type: currentAttemptType === 'trial' ? 'trial' : 'official'
+  });
+}
+
 async function removeRealtimeChannel() {
+  closeAllPublisherPeers();
   realtimeSubscribed = false;
   const channel = realtimeChannel;
   realtimeChannel = null;
@@ -349,6 +531,9 @@ async function initRealtimeChannel() {
   realtimeInitPromise = (async () => {
     await removeRealtimeChannel();
     const config = await request(`leaderboard?realtime=1&booth=${liveBoothId}`);
+    if (Array.isArray(config.ice_servers) && config.ice_servers.length) {
+      rtcConfig = {...rtcConfig, iceServers: config.ice_servers};
+    }
     realtimeClient = supabaseBrowser.createClient(config.supabase_url, config.supabase_publishable_key, {
       auth: {persistSession:false, autoRefreshToken:false, detectSessionInUrl:false},
       realtime: {params:{eventsPerSecond:30}}
@@ -359,6 +544,10 @@ async function initRealtimeChannel() {
     });
     channel.__boothId = liveBoothId;
     realtimeChannel = channel;
+    channel
+      .on('broadcast', {event:'viewer-ready'}, handleViewerReady)
+      .on('broadcast', {event:'webrtc-answer'}, message => { handleWebRtcAnswer(message).catch(() => {}); })
+      .on('broadcast', {event:'webrtc-ice'}, handleWebRtcIce);
 
     return await new Promise(resolve => {
       let settled = false;
@@ -369,6 +558,11 @@ async function initRealtimeChannel() {
         if (status === 'SUBSCRIBED') {
           realtimeSubscribed = true;
           clearTimeout(timeout);
+          announcePublisherReady();
+          clearInterval(rtcPublisherTimer);
+          rtcPublisherTimer = setInterval(() => {
+            if (openPeerCount() === 0) announcePublisherReady();
+          }, 500);
           if (!settled) { settled = true; resolve(true); }
         } else if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) {
           realtimeSubscribed = false;
@@ -391,19 +585,24 @@ function broadcastLiveState(active = true, force = false) {
   if (!force && now - lastRealtimeSentAt < 35) return;
   lastRealtimeSentAt = now;
 
+  const state = realtimeState(active);
+  sendStateToRtcPeers(state);
+
   if (!realtimeSubscribed || !realtimeChannel) {
     initRealtimeChannel().then(ready => {
       if (ready && realtimeChannel) {
-        realtimeChannel.send({type:'broadcast', event:'game-state', payload:realtimeState(active)}).catch(() => {});
+        realtimeChannel.send({type:'broadcast', event:'game-state', payload:state}).catch(() => {});
       }
     }).catch(() => {});
     return;
   }
 
+  // Supabase Broadcast remains a resilient fallback. The direct WebRTC
+  // data channel above is what provides frame-level live movement.
   realtimeChannel.send({
     type: 'broadcast',
     event: 'game-state',
-    payload: realtimeState(active)
+    payload: state
   }).catch(() => {
     realtimeSubscribed = false;
     initRealtimeChannel().catch(() => {});
@@ -495,9 +694,15 @@ $('#startButton').addEventListener('click',async()=>{
   if (liveDisplayRequested) {
     $('#overlayTitle').textContent='CONNECTING';
     $('#overlayText').textContent='Preparing the booth TV...';
-    await Promise.race([initRealtimeChannel(), wait(1800)]).catch(() => false);
+    await Promise.race([initRealtimeChannel(), wait(1200)]).catch(() => false);
+    announcePublisherReady();
     broadcastLiveState(true, true);
-    await wait(120);
+    await Promise.race([
+      (async () => {
+        while (openPeerCount() === 0) await wait(25);
+      })(),
+      wait(650)
+    ]).catch(() => {});
   }
 
   for(const value of ['3','2','1','GO!']){
