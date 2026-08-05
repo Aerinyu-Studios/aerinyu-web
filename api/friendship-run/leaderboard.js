@@ -19,10 +19,14 @@ export default async function handler(req,res){
       const boothId=[1,2].includes(Number(req.query?.booth))?Number(req.query.booth):1;
       const supabaseUrl=String(process.env.NEXT_PUBLIC_SUPABASE_URL||process.env.SUPABASE_URL||'').trim();
       const publishableKey=String(
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||
+        process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY||
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY||
         process.env.SUPABASE_PUBLISHABLE_KEY||
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||
+        process.env.SUPABASE_ANON_KEY||
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||
-        process.env.SUPABASE_ANON_KEY||''
+        process.env.VITE_SUPABASE_PUBLISHABLE_KEY||
+        process.env.VITE_SUPABASE_ANON_KEY||''
       ).trim();
       if(!supabaseUrl||!publishableKey){
         return json(res,503,{error:'Realtime is not configured. Add a public Supabase URL and publishable key in Vercel.'});
