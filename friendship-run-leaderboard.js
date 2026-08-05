@@ -20,7 +20,7 @@ let sceneIndex = 0;
 let currentSceneKey = '';
 let ambientReplayTimer = null;
 const boothId = [1,2].includes(Number(document.body?.dataset?.booth)) ? Number(document.body.dataset.booth) : (/leaderboard2(?:\.html)?$/.test(location.pathname) ? 2 : 1);
-let livePollTimer = null;
+let livePollTimer = null; // independent of scene transitions; must keep polling while logo/map/announcements show
 let liveGameActive = false;
 const liveCanvas = document.querySelector('#liveGameCanvas');
 const liveCtx = liveCanvas?.getContext('2d');
@@ -199,7 +199,6 @@ function restartAmbientMotion(baseName){
   stage.dataset.holdScene=baseName;
   stage.classList.remove('is-single-scene','ambient-replay');
   clearTimeout(ambientReplayTimer);
-  clearInterval(livePollTimer);
   if(sceneSequence.length!==1) return;
   stage.classList.add('is-single-scene');
 
@@ -216,7 +215,6 @@ function showScene(key){
   if(liveGameActive && key!=='live-game') return;
   clearTimeout(sceneTimer);
   clearTimeout(ambientReplayTimer);
-  clearInterval(livePollTimer);
   progressAnimation?.cancel();
   currentSceneKey=key;
   const baseName=key.startsWith('announcement:')?'announcement':key;
