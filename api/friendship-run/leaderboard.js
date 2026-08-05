@@ -47,12 +47,28 @@ export default async function handler(req,res){
         });
       }
 
+      const urlSource = process.env.NEXT_PUBLIC_SUPABASE_URL ? 'NEXT_PUBLIC_SUPABASE_URL' : (process.env.SUPABASE_URL ? 'SUPABASE_URL' : 'missing');
+      const keySource = process.env.SUPABASE_PUBLISHABLE_DEFAULT_KEY ? 'SUPABASE_PUBLISHABLE_DEFAULT_KEY' :
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ? 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY' :
+        process.env.SUPABASE_PUBLISHABLE_KEY ? 'SUPABASE_PUBLISHABLE_KEY' :
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ? 'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY' :
+        process.env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' :
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'NEXT_PUBLIC_SUPABASE_ANON_KEY' :
+        process.env.VITE_SUPABASE_PUBLISHABLE_KEY ? 'VITE_SUPABASE_PUBLISHABLE_KEY' :
+        process.env.VITE_SUPABASE_ANON_KEY ? 'VITE_SUPABASE_ANON_KEY' : 'missing';
+
       return json(res,200,{
         supabase_url:supabaseUrl,
         supabase_publishable_key:publishableKey,
         topic:`friendship-run-live-${boothId}-${suffix}`,
         booth_id:boothId,
-        ice_servers:iceServers
+        ice_servers:iceServers,
+        diagnostics:{
+          url_source:urlSource,
+          key_source:keySource,
+          key_kind:publishableKey.startsWith('sb_publishable_')?'publishable':(publishableKey.split('.').length===3?'legacy-anon-or-jwt':'unknown'),
+          generated_at:new Date().toISOString()
+        }
       });
     }
     if(String(req.query?.display||'')==='1'){

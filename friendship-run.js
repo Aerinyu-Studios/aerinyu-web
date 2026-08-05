@@ -49,6 +49,22 @@ let rtcConfig = {
 };
 
 let supabaseLoaderPromise = null;
+let realtimeHealthToken = '';
+let realtimeHealthTimer = null;
+const realtimeDebug = {
+  role:'publisher', stage:'idle', status:'idle', error:'', config:null,
+  subscribed_at:null, health_latency_ms:null
+};
+window.friendshipRunRealtimeDebug = realtimeDebug;
+function updateRealtimeDebug(patch={}){
+  Object.assign(realtimeDebug,patch,{updated_at:new Date().toISOString()});
+  console.info('[Friendship Run Realtime]',{...realtimeDebug});
+}
+function readableRealtimeError(error,fallback='Realtime connection failed.'){
+  if(!error) return fallback;
+  if(typeof error==='string') return error;
+  return error.message||error.error||error.reason||fallback;
+}
 
 function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
@@ -73,7 +89,7 @@ function ensureSupabaseBrowserClient() {
     }
 
     script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7';
     script.async = true;
     script.dataset.friendshipSupabase = '1';
     script.addEventListener('load', finish, {once:true});
@@ -539,30 +555,66 @@ async function removeRealtimeChannel() {
   realtimeClient = null;
 }
 
+
+function handlePublisherRealtimeHealth(message){
+  const data=message?.payload||message;
+  if(!data||data.token!==realtimeHealthToken) return;
+  clearTimeout(realtimeHealthTimer);
+  const latency=Math.max(0,Date.now()-Number(data.sent_at||Date.now()));
+  updateRealtimeDebug({stage:'healthy',status:'SUBSCRIBED',error:'',health_latency_ms:latency});
+}
+
+function runPublisherRealtimeHealthCheck(){
+  if(!realtimeSubscribed||!realtimeChannel) return;
+  realtimeHealthToken=`publisher-${liveBoothId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  clearTimeout(realtimeHealthTimer);
+  realtimeHealthTimer=setTimeout(()=>{
+    updateRealtimeDebug({stage:'health-timeout',error:'Subscribed, but Broadcast messages were not received. Check Supabase Realtime public-channel settings.'});
+  },2500);
+  realtimeChannel.send({type:'broadcast',event:'realtime-health',payload:{token:realtimeHealthToken,sent_at:Date.now(),booth_id:liveBoothId}})
+    .then(result=>updateRealtimeDebug({send_result:String(result)}))
+    .catch(error=>updateRealtimeDebug({stage:'send-error',error:readableRealtimeError(error)}));
+}
+
 async function initRealtimeChannel() {
   if (!liveDisplayRequested || !attemptToken) return false;
+  updateRealtimeDebug({stage:'loading-client',booth_id:liveBoothId,error:''});
   let supabaseBrowser;
-  try { supabaseBrowser = await ensureSupabaseBrowserClient(); } catch { return false; }
+  try {
+    supabaseBrowser = await ensureSupabaseBrowserClient();
+  } catch (error) {
+    updateRealtimeDebug({stage:'client-load-error',error:readableRealtimeError(error)});
+    return false;
+  }
   if (realtimeChannel && realtimeSubscribed && realtimeChannel.__boothId === liveBoothId) return true;
   if (realtimeInitPromise) return realtimeInitPromise;
 
   realtimeInitPromise = (async () => {
     await removeRealtimeChannel();
-    const config = await request(`leaderboard?realtime=1&booth=${liveBoothId}`);
+    updateRealtimeDebug({stage:'fetching-config'});
+    let config;
+    try {
+      config = await request(`leaderboard?realtime=1&booth=${liveBoothId}`);
+    } catch (error) {
+      updateRealtimeDebug({stage:'config-error',error:readableRealtimeError(error)});
+      return false;
+    }
+    updateRealtimeDebug({stage:'connecting',config:config.diagnostics||{}});
     if (Array.isArray(config.ice_servers) && config.ice_servers.length) {
       rtcConfig = {...rtcConfig, iceServers: config.ice_servers};
     }
     realtimeClient = supabaseBrowser.createClient(config.supabase_url, config.supabase_publishable_key, {
       auth: {persistSession:false, autoRefreshToken:false, detectSessionInUrl:false},
-      realtime: {params:{eventsPerSecond:30}}
+      realtime: {params:{eventsPerSecond:60}}
     });
     realtimeTopic = config.topic;
     const channel = realtimeClient.channel(realtimeTopic, {
-      config: {broadcast: {ack:false, self:false}}
+      config: {private:false, broadcast: {ack:false, self:true}}
     });
     channel.__boothId = liveBoothId;
     realtimeChannel = channel;
     channel
+      .on('broadcast', {event:'realtime-health'}, handlePublisherRealtimeHealth)
       .on('broadcast', {event:'viewer-ready'}, handleViewerReady)
       .on('broadcast', {event:'webrtc-answer'}, message => { handleWebRtcAnswer(message).catch(() => {}); })
       .on('broadcast', {event:'webrtc-ice'}, handleWebRtcIce);
@@ -572,10 +624,13 @@ async function initRealtimeChannel() {
       const timeout = setTimeout(() => {
         if (!settled) { settled = true; resolve(false); }
       }, 5000);
-      channel.subscribe(status => {
+      channel.subscribe((status,error) => {
+        updateRealtimeDebug({stage:'subscription',status,error:readableRealtimeError(error,'')});
         if (status === 'SUBSCRIBED') {
           realtimeSubscribed = true;
+          updateRealtimeDebug({stage:'subscribed',status,subscribed_at:new Date().toISOString(),error:''});
           clearTimeout(timeout);
+          runPublisherRealtimeHealthCheck();
           announcePublisherReady();
           clearInterval(rtcPublisherTimer);
           rtcPublisherTimer = setInterval(() => {
@@ -584,6 +639,8 @@ async function initRealtimeChannel() {
           if (!settled) { settled = true; resolve(true); }
         } else if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) {
           realtimeSubscribed = false;
+          const detail=readableRealtimeError(error,`Supabase channel status: ${status}`);
+          updateRealtimeDebug({stage:'subscription-error',status,error:detail});
           if (!settled && status !== 'CLOSED') {
             clearTimeout(timeout);
             settled = true;

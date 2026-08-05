@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>Friendship Run Realtime Check</title>
+<style>
+:root{font-family:Inter,system-ui,sans-serif;color:#12213f;background:#eaf3ff}*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:28px}.shell{max-width:860px;margin:auto}.card{background:#fff;border:1px solid #bfd4f2;border-radius:18px;padding:24px;box-shadow:0 20px 60px rgba(36,73,129,.14);margin-bottom:18px}h1{margin:0 0 8px;font-size:clamp(30px,5vw,52px)}p{color:#52657e;line-height:1.6}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.stat{border:1px solid #d8e5f7;border-radius:12px;padding:14px}.stat small{display:block;color:#6b7d94}.stat strong{display:block;margin-top:5px;word-break:break-word}label{display:grid;gap:6px;margin:12px 0;font-weight:700}input,select,button{font:inherit;padding:12px 14px;border-radius:10px;border:1px solid #a9bfdc}button{background:#2467d6;color:#fff;border:0;font-weight:800;cursor:pointer}.ok{color:#14723d}.bad{color:#b02b43}.warn{color:#9a6300}pre{white-space:pre-wrap;background:#0c172a;color:#d9e7ff;padding:16px;border-radius:12px;overflow:auto;max-height:360px}@media(max-width:650px){body{padding:14px}.grid{grid-template-columns:1fr}.card{padding:18px}}
+</style>
+</head><body><main class="shell">
+<section class="card"><h1>Realtime connection check</h1><p>This checks the same Supabase Broadcast connection used by Booth 1 and Booth 2. It does not expose your secret keys.</p>
+<label>Booth<select id="booth"><option value="1">Booth 1</option><option value="2">Booth 2</option></select></label>
+<div id="passwordWrap"><label>Event password<input id="password" type="password" autocomplete="current-password"></label></div>
+<button id="run">Run check</button></section>
+<section class="card"><div class="grid">
+<div class="stat"><small>Configuration</small><strong id="configStatus">Not checked</strong></div>
+<div class="stat"><small>Channel subscription</small><strong id="channelStatus">Not checked</strong></div>
+<div class="stat"><small>Broadcast self-test</small><strong id="pingStatus">Not checked</strong></div>
+<div class="stat"><small>Round-trip latency</small><strong id="latency">—</strong></div>
+</div></section>
+<section class="card"><h2>Details</h2><pre id="log">Ready.</pre></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7"></script>
+<script>
+const $=s=>document.querySelector(s);let token=localStorage.getItem('friendship_run_tv_access')||sessionStorage.getItem('friendship_run_access')||'';let client,channel;
+function log(v){$('#log').textContent+=(typeof v==='string'?v:JSON.stringify(v,null,2))+'\n'}
+function state(id,text,kind=''){const e=$(id);e.textContent=text;e.className=kind}
+async function api(path,opt={}){const r=await fetch('/api/friendship-run/'+path,{...opt,headers:{...(opt.body?{'Content-Type':'application/json'}:{}),...(token?{Authorization:'Bearer '+token}:{})}});const b=await r.json().catch(()=>({}));if(!r.ok)throw new Error(b.error||r.statusText);return b}
+async function authenticate(){if(token)return;const password=$('#password').value;if(!password)throw new Error('Enter the event password.');const d=await api('auth',{method:'POST',body:JSON.stringify({password})});token=d.token;localStorage.setItem('friendship_run_tv_access',token)}
+$('#run').onclick=async()=>{try{
+$('#log').textContent='';state('#configStatus','Checking…','warn');state('#channelStatus','Waiting…','warn');state('#pingStatus','Waiting…','warn');state('#latency','—');
+await authenticate();const booth=Number($('#booth').value);const config=await api('leaderboard?realtime=1&booth='+booth);state('#configStatus','Loaded','ok');log({diagnostics:config.diagnostics,topic:config.topic,supabase_host:new URL(config.supabase_url).host});
+if(!window.supabase?.createClient)throw new Error('Supabase browser library did not load.');
+client=window.supabase.createClient(config.supabase_url,config.supabase_publishable_key,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},realtime:{params:{eventsPerSecond:60}}});
+const tokenId='health-'+Date.now()+'-'+Math.random().toString(36).slice(2);let resolved=false;const started=Date.now();
+channel=client.channel(config.topic,{config:{private:false,broadcast:{ack:false,self:true}}}).on('broadcast',{event:'realtime-health'},msg=>{const d=msg?.payload||msg;if(d.token!==tokenId)return;resolved=true;const ms=Date.now()-started;state('#pingStatus','Received','ok');state('#latency',ms+' ms','ok');log('Broadcast self-test received.');});
+channel.subscribe(async(status,error)=>{log({status,error:error?.message||error||null});state('#channelStatus',status,status==='SUBSCRIBED'?'ok':(['CHANNEL_ERROR','TIMED_OUT'].includes(status)?'bad':'warn'));if(status==='SUBSCRIBED'){await channel.send({type:'broadcast',event:'realtime-health',payload:{token:tokenId,sent_at:Date.now()}});setTimeout(()=>{if(!resolved){state('#pingStatus','Not received','bad');state('#latency','Failed','bad');log('Subscribed but the public Broadcast self-test was not received. Check Realtime Settings → Enable Realtime and allow public channels.');}},2500)}})
+}catch(e){state('#configStatus','Error','bad');log(e.message)}};
+if(token)$('#passwordWrap').hidden=true;
+</script></body></html>

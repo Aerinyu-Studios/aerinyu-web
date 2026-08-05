@@ -32,6 +32,22 @@ let realtimeSubscribed = false;
 let realtimeInitPromise = null;
 let realtimeWatchdogTimer = null;
 let supabaseLoaderPromise = null;
+let realtimeHealthToken = '';
+let realtimeHealthTimer = null;
+const realtimeDebug = {
+  role: 'viewer', booth_id: boothId, stage: 'idle', status: 'idle', error: '',
+  config: null, subscribed_at: null, health_latency_ms: null
+};
+window.friendshipRunRealtimeDebug = realtimeDebug;
+function updateRealtimeDebug(patch={}){
+  Object.assign(realtimeDebug, patch, {updated_at:new Date().toISOString()});
+  console.info('[Friendship Run Realtime]', {...realtimeDebug});
+}
+function readableRealtimeError(error, fallback='Realtime connection failed.'){
+  if(!error) return fallback;
+  if(typeof error==='string') return error;
+  return error.message || error.error || error.reason || fallback;
+}
 
 // WebRTC provides the lowest-latency peer-to-peer game feed.
 // Supabase Realtime remains the signalling path and fallback.
@@ -68,7 +84,7 @@ function ensureSupabaseBrowserClient(){
       return;
     }
     script=document.createElement('script');
-    script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7';
     script.async=true;
     script.dataset.friendshipSupabase='1';
     script.addEventListener('load',finish,{once:true});
@@ -320,10 +336,11 @@ function signalRealtime(event, payload){
   realtimeChannel.send({type:'broadcast', event, payload}).catch(()=>{});
 }
 
-function setLiveTransport(label, mode='fallback'){
+function setLiveTransport(label, mode='fallback', detail=''){
   if(!liveTransport) return;
   liveTransport.textContent=label;
   liveTransport.dataset.mode=mode;
+  liveTransport.title=detail || realtimeDebug.error || '';
 }
 
 function useCanvasFallback(){
@@ -524,25 +541,76 @@ function handleRealtimeGame(message){
   showLiveGame(game);
 }
 
+
+function handleRealtimeHealth(message){
+  const data=message?.payload||message;
+  if(!data || data.token!==realtimeHealthToken) return;
+  clearTimeout(realtimeHealthTimer);
+  const latency=Math.max(0,Date.now()-Number(data.sent_at||Date.now()));
+  updateRealtimeDebug({stage:'healthy',status:'SUBSCRIBED',error:'',health_latency_ms:latency});
+  setLiveTransport('REALTIME READY','realtime',`Broadcast round-trip: ${latency} ms`);
+}
+
+function runRealtimeHealthCheck(){
+  if(!realtimeSubscribed||!realtimeChannel) return;
+  realtimeHealthToken=`viewer-${boothId}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  clearTimeout(realtimeHealthTimer);
+  realtimeHealthTimer=setTimeout(()=>{
+    updateRealtimeDebug({stage:'health-timeout',error:'Subscribed, but Broadcast messages were not received. Check Supabase Realtime public-channel settings.'});
+    setLiveTransport('REALTIME BLOCKED','error',realtimeDebug.error);
+  },2500);
+  realtimeChannel.send({type:'broadcast',event:'realtime-health',payload:{token:realtimeHealthToken,sent_at:Date.now(),booth_id:boothId}})
+    .then(result=>{
+      updateRealtimeDebug({send_result:String(result)});
+      if(result==='error'){
+        clearTimeout(realtimeHealthTimer);
+        updateRealtimeDebug({stage:'send-error',error:'Supabase rejected the Broadcast send.'});
+        setLiveTransport('REALTIME ERROR','error',realtimeDebug.error);
+      }
+    })
+    .catch(error=>{
+      clearTimeout(realtimeHealthTimer);
+      updateRealtimeDebug({stage:'send-error',error:readableRealtimeError(error)});
+      setLiveTransport('REALTIME ERROR','error',realtimeDebug.error);
+    });
+}
+
 async function initRealtimeChannel(){
+  updateRealtimeDebug({stage:'loading-client',error:''});
   let supabaseBrowser;
-  try{supabaseBrowser=await ensureSupabaseBrowserClient();}catch{return false;}
+  try{
+    supabaseBrowser=await ensureSupabaseBrowserClient();
+  }catch(error){
+    updateRealtimeDebug({stage:'client-load-error',error:readableRealtimeError(error)});
+    setLiveTransport('CLIENT ERROR','error',realtimeDebug.error);
+    return false;
+  }
   if(realtimeChannel&&realtimeSubscribed) return true;
   if(realtimeInitPromise) return realtimeInitPromise;
 
   realtimeInitPromise=(async()=>{
     await removeRealtimeChannel();
-    const config=await api(`leaderboard?realtime=1&booth=${boothId}`);
+    updateRealtimeDebug({stage:'fetching-config'});
+    let config;
+    try{
+      config=await api(`leaderboard?realtime=1&booth=${boothId}`);
+    }catch(error){
+      updateRealtimeDebug({stage:'config-error',error:readableRealtimeError(error)});
+      setLiveTransport('CONFIG ERROR','error',realtimeDebug.error);
+      return false;
+    }
+    updateRealtimeDebug({stage:'connecting',config:config.diagnostics||{}});
     if(Array.isArray(config.ice_servers)&&config.ice_servers.length){
       rtcConfig={...rtcConfig,iceServers:config.ice_servers};
     }
     realtimeClient=supabaseBrowser.createClient(config.supabase_url,config.supabase_publishable_key,{
       auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
-      realtime:{params:{eventsPerSecond:30}}
+      realtime:{params:{eventsPerSecond:60}}
     });
-    const channel=realtimeClient.channel(config.topic,{config:{broadcast:{ack:false,self:false}}});
+    const channel=realtimeClient.channel(config.topic,{config:{private:false,broadcast:{ack:false,self:true}}});
     realtimeChannel=channel;
     channel
+      .on('broadcast',{event:'realtime-health'},handleRealtimeHealth)
       .on('broadcast',{event:'game-state'},handleRealtimeGame)
       .on('broadcast',{event:'publisher-ready'},handlePublisherReady)
       .on('broadcast',{event:'webrtc-offer'},message=>{handleWebRtcOffer(message).catch(()=>{});})
@@ -551,15 +619,21 @@ async function initRealtimeChannel(){
     return await new Promise(resolve=>{
       let settled=false;
       const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(false);}},5000);
-      channel.subscribe(status=>{
+      channel.subscribe((status,error)=>{
+        updateRealtimeDebug({stage:'subscription',status,error:readableRealtimeError(error,'')});
         if(status==='SUBSCRIBED'){
           realtimeSubscribed=true;
-          setLiveTransport('CONNECTING P2P','connecting');
+          updateRealtimeDebug({stage:'subscribed',status,subscribed_at:new Date().toISOString(),error:''});
+          setLiveTransport('REALTIME CHECK','connecting');
           clearTimeout(timeout);
+          runRealtimeHealthCheck();
           startViewerReadyLoop();
           if(!settled){settled=true;resolve(true);}
         }else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){
           realtimeSubscribed=false;
+          const detail=readableRealtimeError(error,`Supabase channel status: ${status}`);
+          updateRealtimeDebug({stage:'subscription-error',status,error:detail});
+          setLiveTransport(status==='TIMED_OUT'?'REALTIME TIMEOUT':'REALTIME ERROR','error',detail);
           if(!settled&&status!=='CLOSED'){
             clearTimeout(timeout);
             settled=true;

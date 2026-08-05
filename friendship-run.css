@@ -1607,3 +1607,58 @@ body{
 .tv-live-transport[data-mode="fallback"]::before { background: #dc5c73; }
 
 @keyframes tvTransportPulse { 50% { opacity: .35; transform: scale(.75); } }
+
+.tv-live-game-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.tv-live-game-frame > video,
+.tv-live-game-frame > canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #dcecff;
+}
+
+.tv-live-game-frame > video[hidden],
+.tv-live-game-frame > canvas[hidden] {
+  display: none !important;
+}
+
+.tv-live-transport {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 4;
+  padding: 7px 10px;
+  border: 1px solid rgba(23,33,107,.16);
+  background: rgba(255,255,255,.88);
+  color: #17216b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(23,33,107,.1);
+  backdrop-filter: blur(10px);
+}
+
+.tv-live-transport[data-mode="p2p"]::before,
+.tv-live-transport[data-mode="realtime"]::before,
+.tv-live-transport[data-mode="connecting"]::before,
+.tv-live-transport[data-mode="fallback"]::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 1px;
+}
+.tv-live-transport[data-mode="p2p"]::before { background: #20a464; box-shadow: 0 0 0 5px rgba(32,164,100,.12); }
+.tv-live-transport[data-mode="realtime"]::before { background: #4875e8; }
+.tv-live-transport[data-mode="connecting"]::before { background: #e4ad20; animation: tvTransportPulse 1s ease-in-out infinite; }
+.tv-live-transport[data-mode="fallback"]::before { background: #dc5c73; }
+
+@keyframes tvTransportPulse { 50% { opacity: .35; transform: scale(.75); } }
