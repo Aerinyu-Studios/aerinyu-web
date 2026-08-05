@@ -34,6 +34,42 @@ let realtimeTopic = '';
 let realtimeFrameNumber = 0;
 const realtimeSessionId = globalThis.crypto?.randomUUID?.() || `game-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+let supabaseLoaderPromise = null;
+
+function wait(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+function ensureSupabaseBrowserClient() {
+  if (window.supabase?.createClient) return Promise.resolve(window.supabase);
+  if (supabaseLoaderPromise) return supabaseLoaderPromise;
+
+  supabaseLoaderPromise = new Promise((resolve, reject) => {
+    let script = document.querySelector('script[data-friendship-supabase]') ||
+      [...document.scripts].find(item => item.src.includes('@supabase/supabase-js'));
+
+    const finish = () => {
+      if (window.supabase?.createClient) resolve(window.supabase);
+      else reject(new Error('Supabase Realtime client did not load.'));
+    };
+
+    if (script) {
+      if (window.supabase?.createClient) return finish();
+      script.addEventListener('load', finish, {once:true});
+      script.addEventListener('error', () => reject(new Error('Could not load Supabase Realtime.')), {once:true});
+      return;
+    }
+
+    script = document.createElement('script');
+    script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.async = true;
+    script.dataset.friendshipSupabase = '1';
+    script.addEventListener('load', finish, {once:true});
+    script.addEventListener('error', () => reject(new Error('Could not load Supabase Realtime.')), {once:true});
+    document.head.appendChild(script);
+  });
+
+  return supabaseLoaderPromise;
+}
+
 function tone(frequency, duration = 0.07, type = 'square', volume = 0.035) {
   try {
     audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
@@ -211,7 +247,11 @@ $('#registrationForm').addEventListener('submit', async (event) => {
     currentAttemptType = data.attempt_type || 'official';
     liveDisplayRequested = data.live_display === true;
     liveBoothId = [1,2].includes(Number(data.booth_id)) ? Number(data.booth_id) : 1;
-    if (liveDisplayRequested) initRealtimeChannel().catch(() => {});
+    if (liveDisplayRequested) {
+      initRealtimeChannel().then(ready => {
+        if (ready) broadcastLiveState(true, true);
+      }).catch(() => {});
+    }
     $('#currentPlayer').textContent = player.name;
     $('#bestValue').textContent = String(data.top_score || 0).padStart(3,'0');
     const noticeTitle = document.querySelector('#attemptNoticeTitle');
@@ -241,6 +281,7 @@ function resetGame() {
   $('#overlayTitle').textContent = 'READY?';
   $('#overlayText').textContent = 'Use Arrow Keys or WASD.';
   $('#startButton').hidden = false;
+  $('#startButton').disabled = false;
   $('#gameOverlay').hidden = false;
   draw();
 }
@@ -300,14 +341,15 @@ async function removeRealtimeChannel() {
 
 async function initRealtimeChannel() {
   if (!liveDisplayRequested || !attemptToken) return false;
-  if (!window.supabase?.createClient) return false;
+  let supabaseBrowser;
+  try { supabaseBrowser = await ensureSupabaseBrowserClient(); } catch { return false; }
   if (realtimeChannel && realtimeSubscribed && realtimeChannel.__boothId === liveBoothId) return true;
   if (realtimeInitPromise) return realtimeInitPromise;
 
   realtimeInitPromise = (async () => {
     await removeRealtimeChannel();
     const config = await request(`leaderboard?realtime=1&booth=${liveBoothId}`);
-    realtimeClient = window.supabase.createClient(config.supabase_url, config.supabase_publishable_key, {
+    realtimeClient = supabaseBrowser.createClient(config.supabase_url, config.supabase_publishable_key, {
       auth: {persistSession:false, autoRefreshToken:false, detectSessionInUrl:false},
       realtime: {params:{eventsPerSecond:30}}
     });
@@ -362,7 +404,10 @@ function broadcastLiveState(active = true, force = false) {
     type: 'broadcast',
     event: 'game-state',
     payload: realtimeState(active)
-  }).catch(() => { realtimeSubscribed = false; });
+  }).catch(() => {
+    realtimeSubscribed = false;
+    initRealtimeChannel().catch(() => {});
+  });
 }
 
 async function publishLiveState(active = true, force = false) {
@@ -442,8 +487,19 @@ window.addEventListener('keydown', (event) => {
 document.querySelectorAll('[data-direction]').forEach(button=>button.addEventListener('pointerdown',()=>changeDirection(directions[button.dataset.direction])));
 
 $('#startButton').addEventListener('click',async()=>{
-  $('#startButton').hidden=true;
+  const startButton = $('#startButton');
+  startButton.hidden=true;
+  startButton.disabled=true;
   audioContext?.resume?.();
+
+  if (liveDisplayRequested) {
+    $('#overlayTitle').textContent='CONNECTING';
+    $('#overlayText').textContent='Preparing the booth TV...';
+    await Promise.race([initRealtimeChannel(), wait(1800)]).catch(() => false);
+    broadcastLiveState(true, true);
+    await wait(120);
+  }
+
   for(const value of ['3','2','1','GO!']){
     $('#overlayTitle').textContent=value;
     tone(value === 'GO!' ? 760 : 420 + (3 - Number(value || 3)) * 90, value === 'GO!' ? .12 : .055);

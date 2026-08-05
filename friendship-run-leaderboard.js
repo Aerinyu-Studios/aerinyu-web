@@ -31,6 +31,32 @@ let realtimeChannel = null;
 let realtimeSubscribed = false;
 let realtimeInitPromise = null;
 let realtimeWatchdogTimer = null;
+let supabaseLoaderPromise = null;
+
+function wait(ms){ return new Promise(resolve=>setTimeout(resolve,ms)); }
+
+function ensureSupabaseBrowserClient(){
+  if(window.supabase?.createClient) return Promise.resolve(window.supabase);
+  if(supabaseLoaderPromise) return supabaseLoaderPromise;
+  supabaseLoaderPromise=new Promise((resolve,reject)=>{
+    let script=document.querySelector('script[data-friendship-supabase]')||[...document.scripts].find(item=>item.src.includes('@supabase/supabase-js'));
+    const finish=()=>window.supabase?.createClient?resolve(window.supabase):reject(new Error('Supabase Realtime client did not load.'));
+    if(script){
+      if(window.supabase?.createClient) return finish();
+      script.addEventListener('load',finish,{once:true});
+      script.addEventListener('error',()=>reject(new Error('Could not load Supabase Realtime.')),{once:true});
+      return;
+    }
+    script=document.createElement('script');
+    script.src='https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+    script.async=true;
+    script.dataset.friendshipSupabase='1';
+    script.addEventListener('load',finish,{once:true});
+    script.addEventListener('error',()=>reject(new Error('Could not load Supabase Realtime.')),{once:true});
+    document.head.appendChild(script);
+  });
+  return supabaseLoaderPromise;
+}
 const liveCanvas = document.querySelector('#liveGameCanvas');
 const liveCtx = liveCanvas?.getContext('2d');
 
@@ -304,14 +330,15 @@ function handleRealtimeGame(message){
 }
 
 async function initRealtimeChannel(){
-  if(!window.supabase?.createClient) return false;
+  let supabaseBrowser;
+  try{supabaseBrowser=await ensureSupabaseBrowserClient();}catch{return false;}
   if(realtimeChannel&&realtimeSubscribed) return true;
   if(realtimeInitPromise) return realtimeInitPromise;
 
   realtimeInitPromise=(async()=>{
     await removeRealtimeChannel();
     const config=await api(`leaderboard?realtime=1&booth=${boothId}`);
-    realtimeClient=window.supabase.createClient(config.supabase_url,config.supabase_publishable_key,{
+    realtimeClient=supabaseBrowser.createClient(config.supabase_url,config.supabase_publishable_key,{
       auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
       realtime:{params:{eventsPerSecond:30}}
     });
@@ -388,7 +415,7 @@ function scheduleLivePoll(delay){
 }
 
 async function loadLiveGame(){
-  let nextDelay=realtimeSubscribed?5000:900;
+  let nextDelay=realtimeSubscribed?2500:700;
   try{
     const data=await api(`leaderboard?live=1&booth=${boothId}`);
     const recentRealtime=Date.now()-lastRealtimeReceivedAt<2500;
@@ -416,7 +443,7 @@ function startAutoRefresh(){
   realtimeWatchdogTimer=setInterval(()=>{
     if(liveGameActive&&Date.now()-lastRealtimeReceivedAt>4500) loadLiveGame();
     if(!realtimeSubscribed) initRealtimeChannel().catch(()=>{});
-  },2000);
+  },1000);
 }
 
 async function init(){
@@ -426,6 +453,7 @@ async function init(){
   if(!accessToken) return showGate();
   const [leaderboardLoaded, configLoaded] = await Promise.all([loadLeaderboard(), loadDisplayConfig()]);
   if (!leaderboardLoaded || !configLoaded) return;
+  await Promise.race([initRealtimeChannel(), wait(1800)]).catch(()=>false);
   showBoard();
   startAutoRefresh();
 }
