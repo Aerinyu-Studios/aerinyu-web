@@ -64,12 +64,28 @@ export default async function handler(req,res){
         supabase.from('friendship_run_announcements').select('*').order('sort_order',{ascending:true}).order('created_at',{ascending:true})
       ]);
       for(const result of [playersResult,paymentsResult,auditResult,settingsResult,announcementsResult]) if(result.error) throw result.error;
+      const players=playersResult.data||[];
+      const playerByStudentId=new Map(players.map(player=>[
+        String(player.student_id_normalized||player.student_id||'').toUpperCase().replace(/\s+/g,''),
+        player
+      ]));
       const payments=await Promise.all((paymentsResult.data||[]).map(async payment=>{
-        if(!payment.proof_path) return {...payment,proof_url:null};
-        const signed=await supabase.storage.from('friendship-run-payment-proofs').createSignedUrl(payment.proof_path,60*20);
-        return {...payment,proof_url:signed.data?.signedUrl||null};
+        const normalized=String(payment.student_id_normalized||payment.student_id||'').toUpperCase().replace(/\s+/g,'');
+        const player=playerByStudentId.get(normalized);
+        let proofUrl=null;
+        if(payment.proof_path){
+          const signed=await supabase.storage.from('friendship-run-payment-proofs').createSignedUrl(payment.proof_path,60*20);
+          proofUrl=signed.data?.signedUrl||null;
+        }
+        return {
+          ...payment,
+          proof_url:proofUrl,
+          player_name:player?.name||null,
+          player_programme:player?.programme||null,
+          player_id:player?.id||payment.player_id||null
+        };
       }));
-      return json(res,200,{entries:playersResult.data||[],payments,audit:auditResult.data||[],totals:paymentTotals(payments),display_settings:settingsResult.data||null,announcements:announcementsResult.data||[]});
+      return json(res,200,{entries:players,payments,audit:auditResult.data||[],totals:paymentTotals(payments),display_settings:settingsResult.data||null,announcements:announcementsResult.data||[]});
     }
 
     if(type==='display-settings'){

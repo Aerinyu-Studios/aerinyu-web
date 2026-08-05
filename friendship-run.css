@@ -1259,3 +1259,111 @@ body{
 
 @media(max-width:1050px){.booth-session-bar{grid-template-columns:1fr}.booth-session-actions{justify-content:flex-start}.booth-main-grid{grid-template-columns:1fr!important}.code-card{position:static}.admin-booth-overview{grid-template-columns:repeat(3,1fr)!important}.admin-display-form,.announcement-admin-grid{grid-template-columns:1fr!important}.display-duration-grid{grid-template-columns:1fr 1fr!important}.tv-live-game-shell{grid-template-columns:1fr;grid-template-rows:auto auto auto}.tv-live-game-header,.tv-live-game-frame,.tv-live-game-shell>footer{grid-column:1;grid-row:auto}.tv-live-game-frame{width:min(68vh,86vw)}.tv-announcement-card.has-image{grid-template-columns:1fr!important}.tv-announcement-media{min-height:34vh}.fr-admin-entry,.payment-entry{grid-template-columns:1fr!important}.live-game-toggle-grid{grid-template-columns:1fr}}
 @media(max-width:640px){.fr-admin-shell,.booth-shell{width:min(100% - 24px,1480px)!important}.admin-booth-overview{grid-template-columns:1fr 1fr!important}.display-duration-grid{grid-template-columns:1fr!important}.choice-group{grid-template-columns:1fr!important}.proof-capture{grid-template-columns:1fr!important}.announcement-image-editor{grid-template-columns:1fr}.tv-announcement-card.has-image{width:94vw!important}.tv-live-game-header{align-items:flex-start}.tv-live-game-score strong{font-size:64px}}
+
+/* v65 — audit/mobile consistency and TV leaderboard fit */
+.camera-stage video{
+  transform:none!important;
+}
+
+/* Keep evidence/receipt previews in the same orientation as the saved photo. */
+.booth-page .camera-stage video,
+.challenge-page .camera-stage video{
+  transform:none!important;
+}
+
+/* TV leaderboard: compact stepped podium with more room for the ranking table. */
+.tv-leaderboard-scene .tv-board-inner{
+  padding:clamp(18px,2vw,30px) clamp(22px,2.4vw,40px) 18px!important;
+  grid-template-rows:auto 230px minmax(0,1fr) auto!important;
+  gap:12px!important;
+}
+
+.tv-leaderboard-scene .tv-header{
+  min-height:108px;
+  padding-bottom:12px;
+}
+
+.tv-leaderboard-scene .tv-brand-simple h1{
+  font-size:clamp(46px,5vw,76px)!important;
+  line-height:.92!important;
+}
+
+.tv-leaderboard-scene .tv-podium{
+  width:min(1480px,calc(100vw - 64px))!important;
+  height:230px!important;
+  margin:0 auto!important;
+  grid-template-columns:minmax(0,1fr) minmax(0,1.06fr) minmax(0,1fr)!important;
+  gap:14px!important;
+  align-items:end!important;
+}
+
+.tv-leaderboard-scene .tv-podium-card{
+  min-width:0!important;
+  height:auto!important;
+  padding:15px 17px!important;
+  grid-template-columns:34px 58px minmax(0,1fr)!important;
+  gap:12px!important;
+  align-items:center!important;
+  overflow:hidden!important;
+}
+
+.tv-leaderboard-scene .tv-podium-card.first{min-height:230px!important}
+.tv-leaderboard-scene .tv-podium-card.second{min-height:205px!important}
+.tv-leaderboard-scene .tv-podium-card.third{min-height:182px!important}
+.tv-leaderboard-scene .tv-rank-number{font-size:36px!important}
+.tv-leaderboard-scene .tv-podium-card .avatar{width:58px!important;height:58px!important}
+.tv-leaderboard-scene .tv-podium-copy{min-width:0!important;overflow:visible!important}
+.tv-leaderboard-scene .tv-podium-card h2{
+  display:block!important;
+  margin:0!important;
+  font-size:clamp(19px,1.7vw,31px)!important;
+  line-height:1.03!important;
+  white-space:normal!important;
+  overflow:visible!important;
+  overflow-wrap:anywhere!important;
+  -webkit-line-clamp:unset!important;
+}
+.tv-leaderboard-scene .tv-podium-card small{font-size:clamp(11px,1vw,14px)!important}
+.tv-leaderboard-scene .tv-podium-card strong{font-size:clamp(34px,3.4vw,54px)!important;line-height:1!important}
+.tv-leaderboard-scene .player-card-message{
+  margin-top:7px!important;
+  padding-top:6px!important;
+  font-size:clamp(10px,.9vw,13px)!important;
+  line-height:1.25!important;
+  -webkit-line-clamp:1!important;
+}
+
+.tv-leaderboard-scene .tv-rankings{
+  min-height:0!important;
+  padding:0 18px!important;
+  overflow:hidden!important;
+}
+.tv-leaderboard-scene .tv-rankings-head{
+  height:42px!important;
+  grid-template-columns:62px minmax(0,1fr) 90px!important;
+}
+.tv-leaderboard-scene .tv-ranking-list{
+  height:100%!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  scrollbar-width:thin;
+}
+.tv-leaderboard-scene .tv-ranking-row{
+  min-height:54px!important;
+  padding:6px 12px!important;
+  grid-template-columns:52px minmax(0,1fr) 78px!important;
+}
+.tv-leaderboard-scene .tv-ranking-row>b{font-size:22px!important}
+.tv-leaderboard-scene .tv-player{gap:10px!important;font-size:17px!important}
+.tv-leaderboard-scene .tv-player .avatar{width:38px!important;height:38px!important}
+.tv-leaderboard-scene .tv-player small{font-size:10px!important}
+.tv-leaderboard-scene .ranking-message{font-size:10px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+.tv-leaderboard-scene .tv-ranking-row>strong{font-size:27px!important}
+
+@media(max-width:900px){
+  .tv-leaderboard-scene .tv-board-inner{grid-template-rows:auto auto minmax(420px,1fr) auto!important}
+  .tv-leaderboard-scene .tv-podium{height:auto!important;grid-template-columns:1fr!important;width:calc(100vw - 32px)!important}
+  .tv-leaderboard-scene .tv-podium-card.first,
+  .tv-leaderboard-scene .tv-podium-card.second,
+  .tv-leaderboard-scene .tv-podium-card.third{min-height:130px!important}
+}
