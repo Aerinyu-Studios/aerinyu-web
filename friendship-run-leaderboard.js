@@ -43,6 +43,7 @@ let rtcDataChannel = null;
 let rtcPendingIce = [];
 let rtcReadyTimer = null;
 let rtcLastMessageAt = 0;
+let rtcMediaActive = false;
 let rtcConfig = {
   iceServers: [
     {urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']}
@@ -78,6 +79,8 @@ function ensureSupabaseBrowserClient(){
 }
 const liveCanvas = document.querySelector('#liveGameCanvas');
 const liveCtx = liveCanvas?.getContext('2d');
+const liveVideo = document.querySelector('#liveGameVideo');
+const liveTransport = document.querySelector('#liveGameTransport');
 
 function initLogoFallback(){
   const logo = $('#tvEventLogo');
@@ -317,6 +320,22 @@ function signalRealtime(event, payload){
   realtimeChannel.send({type:'broadcast', event, payload}).catch(()=>{});
 }
 
+function setLiveTransport(label, mode='fallback'){
+  if(!liveTransport) return;
+  liveTransport.textContent=label;
+  liveTransport.dataset.mode=mode;
+}
+
+function useCanvasFallback(){
+  rtcMediaActive=false;
+  if(liveVideo){
+    try{liveVideo.pause();}catch{}
+    liveVideo.srcObject=null;
+    liveVideo.hidden=true;
+  }
+  if(liveCanvas) liveCanvas.hidden=false;
+}
+
 function closeViewerPeer(){
   clearInterval(rtcReadyTimer);
   rtcReadyTimer = null;
@@ -325,6 +344,8 @@ function closeViewerPeer(){
   rtcDataChannel = null;
   rtcPeer = null;
   rtcPendingIce = [];
+  useCanvasFallback();
+  setLiveTransport(realtimeSubscribed?'REALTIME BACKUP':'CONNECTING','fallback');
 }
 
 function sendViewerReady(){
@@ -364,6 +385,7 @@ function attachDataChannel(channel){
   channel.addEventListener('open',()=>{
     clearInterval(rtcReadyTimer);
     rtcReadyTimer = null;
+    setLiveTransport(rtcMediaActive?'P2P VIDEO':'P2P DATA','p2p');
   });
   channel.addEventListener('message',event=>{
     try{
@@ -394,6 +416,16 @@ async function handleWebRtcOffer(message){
   rtcPeer = pc;
 
   pc.addEventListener('datachannel',event=>attachDataChannel(event.channel));
+  pc.addEventListener('track',event=>{
+    const stream=event.streams?.[0];
+    if(!stream||!liveVideo) return;
+    liveVideo.srcObject=stream;
+    liveVideo.hidden=false;
+    if(liveCanvas) liveCanvas.hidden=true;
+    rtcMediaActive=true;
+    setLiveTransport('P2P VIDEO','p2p');
+    liveVideo.play().catch(()=>{});
+  });
   pc.addEventListener('icecandidate',event=>{
     if(!event.candidate) return;
     signalRealtime('webrtc-ice',{
@@ -481,6 +513,7 @@ function handleRealtimeGame(message){
   if(Number.isFinite(frameNumber)&&frameNumber<=lastRealtimeFrameNumber) return;
   if(Number.isFinite(frameNumber)) lastRealtimeFrameNumber=frameNumber;
   lastRealtimeReceivedAt=Date.now();
+  if(!rtcMediaActive && rtcDataChannel?.readyState!=='open') setLiveTransport('REALTIME','realtime');
 
   if(game.active===false){
     if(!currentLiveGame?.session_id||!game.session_id||currentLiveGame.session_id===game.session_id) stopLiveGame();
@@ -521,6 +554,7 @@ async function initRealtimeChannel(){
       channel.subscribe(status=>{
         if(status==='SUBSCRIBED'){
           realtimeSubscribed=true;
+          setLiveTransport('CONNECTING P2P','connecting');
           clearTimeout(timeout);
           startViewerReadyLoop();
           if(!settled){settled=true;resolve(true);}
@@ -576,7 +610,7 @@ function showLiveGame(game){
   $('#liveGameProgramme').textContent=`${game.programme||'Snake Challenge'}${game.attempt_type==='trial'?' · FREE TRIAL':' · OFFICIAL ATTEMPT'}`;
   $('#liveGameScore').textContent=String(game.score||0);
   $('#liveGameBoothLabel').textContent=`BOOTH ${boothId}`;
-  drawLiveGame(game);
+  if(!rtcMediaActive) drawLiveGame(game);
 }
 
 function scheduleLivePoll(delay){
@@ -586,12 +620,12 @@ function scheduleLivePoll(delay){
 
 async function loadLiveGame(){
   const peerLive = rtcDataChannel?.readyState==='open' && Date.now()-rtcLastMessageAt<1500;
-  let nextDelay=peerLive?5000:(realtimeSubscribed?1800:700);
+  let nextDelay=peerLive?6000:(realtimeSubscribed?900:550);
   try{
     const data=await api(`leaderboard?live=1&booth=${boothId}`);
     const recentRealtime=Math.max(lastRealtimeReceivedAt,rtcLastMessageAt) && Date.now()-Math.max(lastRealtimeReceivedAt,rtcLastMessageAt)<2500;
     if(data.live_game){
-      if(!recentRealtime) showLiveGame(data.live_game);
+      if(!recentRealtime){ setLiveTransport('API BACKUP','fallback'); showLiveGame(data.live_game); }
     }else if(liveGameActive&&!recentRealtime){
       stopLiveGame();
     }

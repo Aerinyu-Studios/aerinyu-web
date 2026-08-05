@@ -38,6 +38,7 @@ const realtimeSessionId = globalThis.crypto?.randomUUID?.() || `game-${Date.now(
 // Supabase Realtime is retained for signalling and as a fallback.
 const rtcPeers = new Map();
 let rtcPublisherTimer = null;
+let liveCanvasStream = null;
 let rtcConfig = {
   iceServers: [
     {urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302']}
@@ -360,6 +361,17 @@ function closeAllPublisherPeers() {
   for (const viewerId of [...rtcPeers.keys()]) closePublisherPeer(viewerId);
 }
 
+
+function getLiveCanvasStream() {
+  if (liveCanvasStream) {
+    const tracks = liveCanvasStream.getTracks();
+    if (tracks.some(track => track.readyState === 'live')) return liveCanvasStream;
+  }
+  if (typeof canvas.captureStream !== 'function') return null;
+  liveCanvasStream = canvas.captureStream(30);
+  return liveCanvasStream;
+}
+
 function openPeerCount() {
   let count = 0;
   for (const peer of rtcPeers.values()) {
@@ -413,6 +425,12 @@ async function createPublisherPeer(viewerId) {
   if (existing) closePublisherPeer(viewerId);
 
   const pc = new RTCPeerConnection(rtcConfig);
+  const mediaStream = getLiveCanvasStream();
+  if (mediaStream) {
+    for (const track of mediaStream.getTracks()) {
+      try { pc.addTrack(track, mediaStream); } catch {}
+    }
+  }
   const dc = pc.createDataChannel('friendship-run-live', {
     ordered: false,
     maxRetransmits: 0
@@ -420,7 +438,7 @@ async function createPublisherPeer(viewerId) {
   dc.binaryType = 'arraybuffer';
   dc.bufferedAmountLowThreshold = 8192;
 
-  const peer = {pc, dc, pendingIce: [], createdAt: Date.now()};
+  const peer = {pc, dc, pendingIce: [], createdAt: Date.now(), mediaStream};
   rtcPeers.set(viewerId, peer);
 
   dc.addEventListener('open', () => {
@@ -615,7 +633,7 @@ async function publishLiveState(active = true, force = false) {
 
   // Keep the existing database state as a low-frequency fallback for reconnects.
   const now = Date.now();
-  if (!force && (liveSyncInFlight || now - lastLiveSyncAt < 1500)) return;
+  if (!force && (liveSyncInFlight || now - lastLiveSyncAt < 700)) return;
   liveSyncInFlight = true;
   lastLiveSyncAt = now;
   try {
@@ -694,15 +712,21 @@ $('#startButton').addEventListener('click',async()=>{
   if (liveDisplayRequested) {
     $('#overlayTitle').textContent='CONNECTING';
     $('#overlayText').textContent='Preparing the booth TV...';
-    await Promise.race([initRealtimeChannel(), wait(1200)]).catch(() => false);
+    await Promise.race([initRealtimeChannel(), wait(2200)]).catch(() => false);
     announcePublisherReady();
     broadcastLiveState(true, true);
-    await Promise.race([
+    const linked = await Promise.race([
       (async () => {
-        while (openPeerCount() === 0) await wait(25);
+        while (openPeerCount() === 0) await wait(20);
+        return true;
       })(),
-      wait(650)
-    ]).catch(() => {});
+      wait(4000).then(() => false)
+    ]).catch(() => false);
+    if (!linked) {
+      $('#overlayTitle').textContent='TV FALLBACK';
+      $('#overlayText').textContent='Direct TV link was not established. Continuing with the backup feed.';
+      await wait(850);
+    }
   }
 
   for(const value of ['3','2','1','GO!']){
