@@ -20,8 +20,17 @@ let sceneIndex = 0;
 let currentSceneKey = '';
 let ambientReplayTimer = null;
 const boothId = [1,2].includes(Number(document.body?.dataset?.booth)) ? Number(document.body.dataset.booth) : (/leaderboard2(?:\.html)?$/.test(location.pathname) ? 2 : 1);
-let livePollTimer = null; // independent of scene transitions; must keep polling while logo/map/announcements show
+let livePollTimer = null; // database fallback only; Realtime is the primary live feed
 let liveGameActive = false;
+let currentLiveGame = null;
+let lastRealtimeReceivedAt = 0;
+let lastRealtimeFrameNumber = -1;
+let currentRealtimeSession = '';
+let realtimeClient = null;
+let realtimeChannel = null;
+let realtimeSubscribed = false;
+let realtimeInitPromise = null;
+let realtimeWatchdogTimer = null;
 const liveCanvas = document.querySelector('#liveGameCanvas');
 const liveCtx = liveCanvas?.getContext('2d');
 
@@ -41,6 +50,13 @@ function initLogoFallback(){
 function escapeHtml(value=''){return String(value).replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
 function avatarMarkup(entry){return entry.photo_url?`<img class="avatar" src="${escapeHtml(entry.photo_url)}" alt="">`:`<div class="avatar">${escapeHtml((entry.name || '?').charAt(0).toUpperCase())}</div>`}
 function rankedEntries(entries=[]){return [...entries].sort((a,b)=>Number(b.score||0)-Number(a.score||0)||String(a.name||'').localeCompare(String(b.name||'')))}
+
+function liveAttemptAllowed(game){
+  const settings=displayConfig.settings||{};
+  const isTrial=game?.attempt_type==='trial';
+  if(boothId===1) return isTrial?settings.live_trial_booth_1_enabled!==false:settings.live_game_booth_1_enabled!==false;
+  return isTrial?settings.live_trial_booth_2_enabled!==false:settings.live_game_booth_2_enabled!==false;
+}
 
 async function api(path, options={}){
   const response = await fetch(`/api/friendship-run/${path}`, {
@@ -69,6 +85,8 @@ function showGate(message=''){
   clearTimeout(sceneTimer);
   clearTimeout(ambientReplayTimer);
   clearInterval(livePollTimer);
+  clearInterval(realtimeWatchdogTimer);
+  removeRealtimeChannel().catch(() => {});
   progressAnimation?.cancel();
   hasStartedCycle=false;
   $('#tvBoard').hidden=true;
@@ -145,6 +163,7 @@ async function loadDisplayConfig(){
   try{
     const data=await api('leaderboard?display=1');
     displayConfig={settings:data.settings||displayConfig.settings,announcements:data.announcements||[]};
+    if(liveGameActive && currentLiveGame && !liveAttemptAllowed(currentLiveGame)) stopLiveGame();
     if(hasStartedCycle) rebuildSceneSequence(false);
     return true;
   }catch(error){
@@ -247,6 +266,81 @@ function showScene(key){
   },duration);
 }
 
+async function removeRealtimeChannel(){
+  realtimeSubscribed=false;
+  const channel=realtimeChannel;
+  realtimeChannel=null;
+  if(realtimeClient&&channel){try{await realtimeClient.removeChannel(channel);}catch{}}
+  realtimeClient=null;
+}
+
+function stopLiveGame(){
+  if(!liveGameActive) return;
+  liveGameActive=false;
+  currentLiveGame=null;
+  rebuildSceneSequence(true);
+}
+
+function handleRealtimeGame(message){
+  const game=message?.payload||message;
+  if(!game||Number(game.booth_id)!==boothId) return;
+  const sessionId=String(game.session_id||'');
+  const frameNumber=Number(game.frame);
+  if(sessionId&&sessionId!==currentRealtimeSession){
+    currentRealtimeSession=sessionId;
+    lastRealtimeFrameNumber=-1;
+  }
+  if(Number.isFinite(frameNumber)&&frameNumber<=lastRealtimeFrameNumber) return;
+  if(Number.isFinite(frameNumber)) lastRealtimeFrameNumber=frameNumber;
+  lastRealtimeReceivedAt=Date.now();
+
+  if(game.active===false){
+    if(!currentLiveGame?.session_id||!game.session_id||currentLiveGame.session_id===game.session_id) stopLiveGame();
+    return;
+  }
+  if(!liveAttemptAllowed(game)) return stopLiveGame();
+  currentLiveGame=game;
+  showLiveGame(game);
+}
+
+async function initRealtimeChannel(){
+  if(!window.supabase?.createClient) return false;
+  if(realtimeChannel&&realtimeSubscribed) return true;
+  if(realtimeInitPromise) return realtimeInitPromise;
+
+  realtimeInitPromise=(async()=>{
+    await removeRealtimeChannel();
+    const config=await api(`leaderboard?realtime=1&booth=${boothId}`);
+    realtimeClient=window.supabase.createClient(config.supabase_url,config.supabase_publishable_key,{
+      auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false},
+      realtime:{params:{eventsPerSecond:30}}
+    });
+    const channel=realtimeClient.channel(config.topic,{config:{broadcast:{ack:false,self:false}}});
+    realtimeChannel=channel;
+    channel.on('broadcast',{event:'game-state'},handleRealtimeGame);
+
+    return await new Promise(resolve=>{
+      let settled=false;
+      const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(false);}},5000);
+      channel.subscribe(status=>{
+        if(status==='SUBSCRIBED'){
+          realtimeSubscribed=true;
+          clearTimeout(timeout);
+          if(!settled){settled=true;resolve(true);}
+        }else if(['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)){
+          realtimeSubscribed=false;
+          if(!settled&&status!=='CLOSED'){
+            clearTimeout(timeout);
+            settled=true;
+            resolve(false);
+          }
+        }
+      });
+    });
+  })().finally(()=>{realtimeInitPromise=null;});
+  return realtimeInitPromise;
+}
+
 function drawLiveGame(game){
   if(!liveCtx||!liveCanvas) return;
   const cells=Number(game.cells)||24;
@@ -273,6 +367,7 @@ function drawLiveGame(game){
 
 function showLiveGame(game){
   liveGameActive=true;
+  currentLiveGame=game;
   clearTimeout(sceneTimer);
   progressAnimation?.cancel();
   document.querySelectorAll('.tv-scene').forEach(scene=>{
@@ -293,11 +388,15 @@ function scheduleLivePoll(delay){
 }
 
 async function loadLiveGame(){
-  let nextDelay=1500;
+  let nextDelay=realtimeSubscribed?5000:900;
   try{
     const data=await api(`leaderboard?live=1&booth=${boothId}`);
-    if(data.live_game){showLiveGame(data.live_game);nextDelay=260;}
-    else if(liveGameActive){liveGameActive=false;rebuildSceneSequence(true);}
+    const recentRealtime=Date.now()-lastRealtimeReceivedAt<2500;
+    if(data.live_game){
+      if(!recentRealtime) showLiveGame(data.live_game);
+    }else if(liveGameActive&&!recentRealtime){
+      stopLiveGame();
+    }
   }catch(error){
     if(error.status===401){localStorage.removeItem('friendship_run_tv_access');accessToken='';showGate('Session expired. Enter the event password again.');return;}
     nextDelay=2500;
@@ -309,9 +408,15 @@ function startAutoRefresh(){
   clearInterval(refreshTimer);
   clearInterval(configTimer);
   clearTimeout(livePollTimer);
+  clearInterval(realtimeWatchdogTimer);
   refreshTimer=setInterval(loadLeaderboard,5000);
   configTimer=setInterval(loadDisplayConfig,5000);
+  initRealtimeChannel().catch(()=>{});
   scheduleLivePoll(0);
+  realtimeWatchdogTimer=setInterval(()=>{
+    if(liveGameActive&&Date.now()-lastRealtimeReceivedAt>4500) loadLiveGame();
+    if(!realtimeSubscribed) initRealtimeChannel().catch(()=>{});
+  },2000);
 }
 
 async function init(){

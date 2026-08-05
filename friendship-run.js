@@ -25,6 +25,14 @@ let liveDisplayRequested = false;
 let liveBoothId = 1;
 let liveSyncInFlight = false;
 let lastLiveSyncAt = 0;
+let lastRealtimeSentAt = 0;
+let realtimeClient = null;
+let realtimeChannel = null;
+let realtimeSubscribed = false;
+let realtimeInitPromise = null;
+let realtimeTopic = '';
+let realtimeFrameNumber = 0;
+const realtimeSessionId = globalThis.crypto?.randomUUID?.() || `game-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
 function tone(frequency, duration = 0.07, type = 'square', volume = 0.035) {
   try {
@@ -203,6 +211,7 @@ $('#registrationForm').addEventListener('submit', async (event) => {
     currentAttemptType = data.attempt_type || 'official';
     liveDisplayRequested = data.live_display === true;
     liveBoothId = [1,2].includes(Number(data.booth_id)) ? Number(data.booth_id) : 1;
+    if (liveDisplayRequested) initRealtimeChannel().catch(() => {});
     $('#currentPlayer').textContent = player.name;
     $('#bestValue').textContent = String(data.top_score || 0).padStart(3,'0');
     const noticeTitle = document.querySelector('#attemptNoticeTitle');
@@ -261,10 +270,108 @@ function draw() {
   });
 }
 
+function realtimeState(active = true) {
+  return {
+    session_id: realtimeSessionId,
+    frame: ++realtimeFrameNumber,
+    booth_id: liveBoothId,
+    active,
+    player_name: player?.name || 'Player',
+    programme: player?.programme || '',
+    attempt_type: currentAttemptType === 'trial' ? 'trial' : 'official',
+    score,
+    cells,
+    snake: snake.map(part => ({x: part.x, y: part.y})),
+    food: {x: food.x, y: food.y},
+    sent_at: Date.now()
+  };
+}
+
+async function removeRealtimeChannel() {
+  realtimeSubscribed = false;
+  const channel = realtimeChannel;
+  realtimeChannel = null;
+  realtimeTopic = '';
+  if (realtimeClient && channel) {
+    try { await realtimeClient.removeChannel(channel); } catch {}
+  }
+  realtimeClient = null;
+}
+
+async function initRealtimeChannel() {
+  if (!liveDisplayRequested || !attemptToken) return false;
+  if (!window.supabase?.createClient) return false;
+  if (realtimeChannel && realtimeSubscribed && realtimeChannel.__boothId === liveBoothId) return true;
+  if (realtimeInitPromise) return realtimeInitPromise;
+
+  realtimeInitPromise = (async () => {
+    await removeRealtimeChannel();
+    const config = await request(`leaderboard?realtime=1&booth=${liveBoothId}`);
+    realtimeClient = window.supabase.createClient(config.supabase_url, config.supabase_publishable_key, {
+      auth: {persistSession:false, autoRefreshToken:false, detectSessionInUrl:false},
+      realtime: {params:{eventsPerSecond:30}}
+    });
+    realtimeTopic = config.topic;
+    const channel = realtimeClient.channel(realtimeTopic, {
+      config: {broadcast: {ack:false, self:false}}
+    });
+    channel.__boothId = liveBoothId;
+    realtimeChannel = channel;
+
+    return await new Promise(resolve => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) { settled = true; resolve(false); }
+      }, 5000);
+      channel.subscribe(status => {
+        if (status === 'SUBSCRIBED') {
+          realtimeSubscribed = true;
+          clearTimeout(timeout);
+          if (!settled) { settled = true; resolve(true); }
+        } else if (['CHANNEL_ERROR','TIMED_OUT','CLOSED'].includes(status)) {
+          realtimeSubscribed = false;
+          if (!settled && status !== 'CLOSED') {
+            clearTimeout(timeout);
+            settled = true;
+            resolve(false);
+          }
+        }
+      });
+    });
+  })().finally(() => { realtimeInitPromise = null; });
+
+  return realtimeInitPromise;
+}
+
+function broadcastLiveState(active = true, force = false) {
+  if (!liveDisplayRequested || !attemptToken) return;
+  const now = performance.now();
+  if (!force && now - lastRealtimeSentAt < 35) return;
+  lastRealtimeSentAt = now;
+
+  if (!realtimeSubscribed || !realtimeChannel) {
+    initRealtimeChannel().then(ready => {
+      if (ready && realtimeChannel) {
+        realtimeChannel.send({type:'broadcast', event:'game-state', payload:realtimeState(active)}).catch(() => {});
+      }
+    }).catch(() => {});
+    return;
+  }
+
+  realtimeChannel.send({
+    type: 'broadcast',
+    event: 'game-state',
+    payload: realtimeState(active)
+  }).catch(() => { realtimeSubscribed = false; });
+}
+
 async function publishLiveState(active = true, force = false) {
   if (!liveDisplayRequested || !attemptToken) return;
+  broadcastLiveState(active, force);
+
+  // Keep the existing database state as a low-frequency fallback for reconnects.
   const now = Date.now();
-  if (!force && (liveSyncInFlight || now - lastLiveSyncAt < 240)) return;
+  if (!force && (liveSyncInFlight || now - lastLiveSyncAt < 1500)) return;
   liveSyncInFlight = true;
   lastLiveSyncAt = now;
   try {
@@ -282,7 +389,7 @@ async function publishLiveState(active = true, force = false) {
       })
     });
   } catch (error) {
-    console.debug('Live TV update skipped:', error.message);
+    console.debug('Live TV fallback update skipped:', error.message);
   } finally {
     liveSyncInFlight = false;
   }
@@ -417,6 +524,7 @@ $('#refreshLeaderboard').addEventListener('click',loadLeaderboard);
 $('#newPlayerButton').addEventListener('click',async()=>{
   $('#registrationForm').reset();
   $('#registrationMessage').textContent='';
+  await removeRealtimeChannel();
   player=null;attemptToken='';currentAttemptType='official';liveDisplayRequested=false;liveBoothId=1;
   capturedPhotoData=null;
   $('#capturedPhoto').src='';
@@ -430,6 +538,7 @@ $('#newPlayerButton').addEventListener('click',async()=>{
 window.addEventListener('beforeunload', () => {
   stopCamera();
   if (running && liveDisplayRequested && attemptToken && accessToken) {
+    try { realtimeChannel?.send({type:'broadcast', event:'game-state', payload:realtimeState(false)}); } catch {}
     fetch('/api/friendship-run/score', {
       method:'POST', keepalive:true,
       headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},

@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { access, friendlyDatabaseError, getSupabase, json } from '../../lib/friendship-run.js';
 
 const fallbackSettings = {
@@ -13,6 +14,28 @@ export default async function handler(req,res){
 
   try{
     const supabase=getSupabase();
+
+    if(String(req.query?.realtime||'')==='1'){
+      const boothId=[1,2].includes(Number(req.query?.booth))?Number(req.query.booth):1;
+      const supabaseUrl=String(process.env.NEXT_PUBLIC_SUPABASE_URL||process.env.SUPABASE_URL||'').trim();
+      const publishableKey=String(
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY||
+        process.env.SUPABASE_PUBLISHABLE_KEY||
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY||
+        process.env.SUPABASE_ANON_KEY||''
+      ).trim();
+      if(!supabaseUrl||!publishableKey){
+        return json(res,503,{error:'Realtime is not configured. Add a public Supabase URL and publishable key in Vercel.'});
+      }
+      const secret=String(process.env.FRIENDSHIP_RUN_TOKEN_SECRET||'friendship-run').trim();
+      const suffix=createHmac('sha256',secret).update(`realtime-booth-${boothId}`).digest('hex').slice(0,24);
+      return json(res,200,{
+        supabase_url:supabaseUrl,
+        supabase_publishable_key:publishableKey,
+        topic:`friendship-run-live-${boothId}-${suffix}`,
+        booth_id:boothId
+      });
+    }
     if(String(req.query?.display||'')==='1'){
       const [settingsResult,announcementsResult]=await Promise.all([
         supabase.from('friendship_run_display_settings').select('*').eq('id',1).maybeSingle(),
