@@ -1,4 +1,6 @@
 const $ = (selector) => document.querySelector(selector);
+const FRIENDSHIP_RUN_TV_BUILD = 'v76';
+window.friendshipRunTvBuild = FRIENDSHIP_RUN_TV_BUILD;
 let accessToken = localStorage.getItem('friendship_run_tv_access') || sessionStorage.getItem('friendship_run_access') || '';
 let refreshTimer = null;
 let configTimer = null;

@@ -1,3 +1,5 @@
+const FRIENDSHIP_RUN_BUILD = 'v76';
+window.friendshipRunBuild = FRIENDSHIP_RUN_BUILD;
 const $ = (selector) => document.querySelector(selector);
 const screens = { gate: $('#gateScreen'), registration: $('#registrationScreen'), game: $('#gameScreen'), result: $('#resultScreen') };
 const canvas = $('#gameCanvas');
@@ -40,7 +42,7 @@ let supabaseLoaderPromise = null;
 let realtimeHealthToken = '';
 let realtimeHealthTimer = null;
 const realtimeDebug = {
-  role:'publisher', stage:'idle', status:'idle', error:'', config:null,
+  build:FRIENDSHIP_RUN_BUILD, role:'publisher', stage:'idle', status:'idle', error:'', config:null,
   subscribed_at:null, health_latency_ms:null
 };
 window.friendshipRunRealtimeDebug = realtimeDebug;
@@ -378,7 +380,14 @@ function runPublisherRealtimeHealthCheck(){
 }
 
 async function initRealtimeChannel() {
-  if (!liveDisplayRequested || !attemptToken) return false;
+  if (!liveDisplayRequested) {
+    updateRealtimeDebug({stage:'skipped',status:'NOT_REQUESTED',error:'Live TV display was not selected.'});
+    return false;
+  }
+  if (!attemptToken) {
+    updateRealtimeDebug({stage:'prerequisite-error',status:'NO_ATTEMPT_TOKEN',error:'The game attempt token is missing. Return to registration and enter the play code again.'});
+    return false;
+  }
   updateRealtimeDebug({stage:'loading-client',booth_id:liveBoothId,error:''});
   let supabaseBrowser;
   try {
@@ -560,7 +569,8 @@ $('#startButton').addEventListener('click',async()=>{
       await wait(250);
     } else {
       $('#overlayTitle').textContent='TV BACKUP';
-      $('#overlayText').textContent='Live sync could not connect. The game will continue with the backup feed.';
+      const reason = realtimeDebug.error || realtimeDebug.status || realtimeDebug.stage || 'Unknown connection error';
+      $('#overlayText').textContent=`Live sync could not connect (${reason}). The game will continue with the backup feed.`;
       await wait(700);
     }
   }
