@@ -618,3 +618,96 @@
   .audit-proof-meta { padding: 13px 15px 18px; }
 }
 .audit-table-hint{margin:6px 0 0;color:#75839d;font-size:12px;line-height:1.45}
+
+/* v66 — page scrolling, larger desktop archive, adaptive phone cards */
+html:has(body.audit-page),
+body.audit-page{
+  height:auto!important;
+  min-height:100dvh!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+body.audit-page{
+  -webkit-overflow-scrolling:touch;
+}
+.audit-shell{
+  width:min(1880px,calc(100% - 24px))!important;
+  min-height:100dvh;
+  padding-bottom:110px!important;
+}
+.audit-layout{
+  min-height:0;
+}
+.audit-record-panel{
+  overflow:visible!important;
+}
+.audit-records{
+  width:100%;
+  max-height:min(76vh,1040px)!important;
+  overflow:auto!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable both-edges;
+  -webkit-overflow-scrolling:touch;
+}
+.audit-data-table{
+  min-width:1780px!important;
+}
+.audit-data-table th,
+.audit-data-table td{
+  padding:13px 12px!important;
+  font-size:13px!important;
+}
+.audit-data-table th{
+  font-size:10px!important;
+}
+.audit-proof-thumb{
+  width:108px!important;
+  height:74px!important;
+}
+.audit-sidebar{
+  align-items:start;
+}
+.audit-sidebar > .panel{
+  min-height:300px;
+}
+.audit-breakdown,
+.audit-event-list{
+  max-height:430px!important;
+}
+
+@media(max-width:900px){
+  html:has(body.audit-page),body.audit-page{overflow:auto!important}
+  .audit-shell{width:calc(100% - 14px)!important;padding:14px 0 70px!important}
+  .audit-header{position:static!important}
+  .audit-stats{grid-template-columns:repeat(8,minmax(155px,76vw))!important}
+  .audit-records{
+    max-height:none!important;
+    overflow:visible!important;
+  }
+  .audit-sidebar{
+    grid-template-columns:1fr!important;
+  }
+  .audit-sidebar > .panel{
+    min-height:0;
+  }
+}
+
+@media(max-width:760px){
+  .audit-data-table tr{
+    padding:8px 14px 10px!important;
+  }
+  .audit-data-table td{
+    grid-template-columns:minmax(92px,32%) minmax(0,1fr)!important;
+    gap:10px!important;
+  }
+  .audit-proof-thumb{
+    width:100%!important;
+    height:min(54vw,220px)!important;
+  }
+  .audit-student-cell strong{
+    font-size:15px!important;
+  }
+  .audit-student-cell > span{
+    font-size:13px!important;
+  }
+}

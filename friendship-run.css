@@ -1367,3 +1367,187 @@ body{
   .tv-leaderboard-scene .tv-podium-card.second,
   .tv-leaderboard-scene .tv-podium-card.third{min-height:130px!important}
 }
+
+
+/* v66 — adaptive booth code, full TV rankings and compact podium */
+.code-card{
+  container-type:inline-size;
+  overflow:hidden!important;
+}
+.code-card #codeResult{
+  width:100%;
+  min-width:0;
+  justify-items:center;
+}
+.code-card #generatedCode{
+  width:auto!important;
+  max-width:100%!important;
+  font-family:"Manrope",ui-monospace,SFMono-Regular,Consolas,monospace!important;
+  font-size:clamp(38px,18cqi,58px)!important;
+  line-height:.95!important;
+  letter-spacing:.055em!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  font-variant-numeric:tabular-nums lining-nums;
+}
+.code-card #codeStudent{
+  max-width:100%;
+  overflow-wrap:anywhere;
+}
+@media(max-width:640px){
+  .code-card #generatedCode{
+    font-size:clamp(36px,16cqi,52px)!important;
+    letter-spacing:.035em!important;
+  }
+}
+
+/* Ensure the TV scene itself never clips the podium or rankings. */
+.tv-leaderboard-scene{
+  overflow:hidden!important;
+}
+.tv-leaderboard-scene .tv-board-inner{
+  width:100%!important;
+  height:100dvh!important;
+  min-height:0!important;
+  padding:clamp(14px,1.7vw,26px) clamp(20px,2.7vw,48px) 12px!important;
+  grid-template-rows:auto 202px minmax(0,1fr) auto!important;
+  gap:10px!important;
+  overflow:hidden!important;
+}
+.tv-leaderboard-scene .tv-header{
+  min-height:88px!important;
+  padding-bottom:8px!important;
+}
+.tv-leaderboard-scene .tv-brand-simple h1{
+  font-size:clamp(42px,4.7vw,70px)!important;
+}
+.tv-leaderboard-scene .tv-podium{
+  width:min(1420px,calc(100vw - 72px))!important;
+  height:202px!important;
+  gap:12px!important;
+}
+.tv-leaderboard-scene .tv-podium-card{
+  grid-template-columns:30px 52px minmax(0,1fr)!important;
+  gap:10px!important;
+  padding:13px 15px!important;
+  min-width:0!important;
+}
+.tv-leaderboard-scene .tv-podium-card.first{min-height:202px!important}
+.tv-leaderboard-scene .tv-podium-card.second{min-height:184px!important}
+.tv-leaderboard-scene .tv-podium-card.third{min-height:166px!important}
+.tv-leaderboard-scene .tv-podium-card .avatar{
+  width:52px!important;
+  height:52px!important;
+}
+.tv-leaderboard-scene .tv-rank-number{
+  font-size:32px!important;
+}
+.tv-leaderboard-scene .tv-podium-card h2{
+  font-size:clamp(17px,1.45vw,26px)!important;
+  line-height:1.04!important;
+  max-height:3.2em;
+  overflow:hidden!important;
+  overflow-wrap:anywhere!important;
+}
+.tv-leaderboard-scene .tv-podium-card small{
+  font-size:clamp(10px,.85vw,13px)!important;
+}
+.tv-leaderboard-scene .tv-podium-card strong{
+  font-size:clamp(30px,2.8vw,46px)!important;
+}
+.tv-leaderboard-scene .player-card-message{
+  font-size:clamp(9px,.72vw,11px)!important;
+  line-height:1.18!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+/* Ranking list: include every returned player and make the full area scrollable. */
+.tv-leaderboard-scene .tv-rankings{
+  min-height:0!important;
+  height:100%!important;
+  padding:0 14px!important;
+  overflow:hidden!important;
+}
+.tv-leaderboard-scene .tv-rankings-head{
+  height:36px!important;
+  grid-template-columns:52px minmax(0,1fr) 78px!important;
+}
+.tv-leaderboard-scene .tv-ranking-list{
+  height:calc(100% - 36px)!important;
+  min-height:0!important;
+  max-height:none!important;
+  overflow-y:scroll!important;
+  overflow-x:hidden!important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  scroll-behavior:smooth;
+  padding-bottom:22px!important;
+}
+.tv-leaderboard-scene .tv-ranking-row{
+  min-height:45px!important;
+  padding:4px 10px!important;
+  grid-template-columns:44px minmax(0,1fr) 70px!important;
+}
+.tv-leaderboard-scene .tv-ranking-row>b{
+  font-size:18px!important;
+}
+.tv-leaderboard-scene .tv-player{
+  gap:8px!important;
+  font-size:14px!important;
+  min-width:0!important;
+}
+.tv-leaderboard-scene .tv-player .avatar{
+  width:32px!important;
+  height:32px!important;
+  flex:0 0 auto;
+}
+.tv-leaderboard-scene .tv-player>div{
+  min-width:0;
+}
+.tv-leaderboard-scene .tv-player span{
+  display:block;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.tv-leaderboard-scene .tv-player small{
+  font-size:9px!important;
+  line-height:1.1!important;
+}
+.tv-leaderboard-scene .ranking-message{
+  margin:1px 0 0!important;
+  font-size:8.5px!important;
+  line-height:1.05!important;
+}
+.tv-leaderboard-scene .tv-ranking-row>strong{
+  font-size:22px!important;
+}
+.tv-leaderboard-scene .tv-footer{
+  min-height:22px;
+  align-items:center;
+  font-size:9px!important;
+}
+
+/* Four admin controls fit cleanly on desktop and stack predictably. */
+.live-game-toggle-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+}
+@media(max-width:720px){
+  .live-game-toggle-grid{grid-template-columns:1fr!important}
+}
+
+/* Keep full podium names visible while preserving the stepped heights. */
+.tv-leaderboard-scene .tv-podium-card.first{min-height:202px!important}
+.tv-leaderboard-scene .tv-podium-card.second{min-height:188px!important}
+.tv-leaderboard-scene .tv-podium-card.third{min-height:176px!important}
+.tv-leaderboard-scene .tv-podium-card h2{
+  max-height:none!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  -webkit-line-clamp:unset!important;
+  font-size:clamp(15px,1.3vw,24px)!important;
+  line-height:1.02!important;
+}

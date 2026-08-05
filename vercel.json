@@ -3,17 +3,89 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "redirects": [
-    {"source":"/index.html","destination":"/","permanent":true},
-    {"source":"/careers.html","destination":"/careers","permanent":true},
-    {"source":"/admin.html","destination":"/admin","permanent":true},
-    {"source":"/qa-testers.html","destination":"/qa-testers","permanent":true},
-    {"source":"/friendship-run.html","destination":"/friendship-run","permanent":true},
-    {"source":"/friendship-run-booth.html","destination":"/friendship-run/booth","permanent":true},
-    {"source":"/friendship-run-leaderboard.html","destination":"/friendship-run/leaderboard","permanent":true}
+    {
+      "source": "/index.html",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/careers.html",
+      "destination": "/careers",
+      "permanent": true
+    },
+    {
+      "source": "/admin.html",
+      "destination": "/admin",
+      "permanent": true
+    },
+    {
+      "source": "/qa-testers.html",
+      "destination": "/qa-testers",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run.html",
+      "destination": "/friendship-run",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run-booth.html",
+      "destination": "/friendship-run/booth",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run-leaderboard.html",
+      "destination": "/friendship-run/leaderboard",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run-leaderboard1.html",
+      "destination": "/friendship-run/leaderboard1",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run-leaderboard2.html",
+      "destination": "/friendship-run/leaderboard2",
+      "permanent": true
+    },
+    {
+      "source": "/friendship-run-audit.html",
+      "destination": "/friendship-run/audit",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    {"source":"/friendship-run/booth","destination":"/friendship-run-booth.html"},
-    {"source":"/friendship-run/leaderboard","destination":"/friendship-run-leaderboard.html"},
-    {"source":"/friendship-run/admin","destination":"/friendship-run-admin.html"}
+    {
+      "source": "/friendship-run/booth",
+      "destination": "/friendship-run-booth.html"
+    },
+    {
+      "source": "/friendship-run/leaderboard",
+      "destination": "/friendship-run-leaderboard1.html"
+    },
+    {
+      "source": "/friendship-run/leaderboard1",
+      "destination": "/friendship-run-leaderboard1.html"
+    },
+    {
+      "source": "/friendship-run/leaderboard2",
+      "destination": "/friendship-run-leaderboard2.html"
+    },
+    {
+      "source": "/friendship-run/admin",
+      "destination": "/friendship-run-admin.html"
+    },
+    {
+      "source": "/friendship-run/audit",
+      "destination": "/friendship-run-audit.html"
+    },
+    {
+      "source": "/leaderboard1",
+      "destination": "/friendship-run-leaderboard1.html"
+    },
+    {
+      "source": "/leaderboard2",
+      "destination": "/friendship-run-leaderboard2.html"
+    }
   ]
 }

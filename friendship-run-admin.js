@@ -67,7 +67,9 @@ function renderDisplaySettings(){
   $('#mapDuration').value=Math.round(Number(settings.map_duration_ms||9000)/1000);
   $('#announcementDuration').value=Math.round(Number(settings.announcement_duration_ms||9000)/1000);
   $('#liveGameBooth1').checked=settings.live_game_booth_1_enabled!==false;
+  $('#liveTrialBooth1').checked=settings.live_trial_booth_1_enabled!==false;
   $('#liveGameBooth2').checked=settings.live_game_booth_2_enabled!==false;
+  $('#liveTrialBooth2').checked=settings.live_trial_booth_2_enabled!==false;
 }
 
 function renderAnnouncements(){
@@ -145,7 +147,7 @@ async function deletePayment(e){const id=e.target.closest('[data-payment-id]').d
 $('#displaySettingsForm')?.addEventListener('submit',async event=>{
   event.preventDefault();const message=$('#displaySettingsMessage');message.textContent='Applying...';
   try{
-    const payload={display_mode:$('#displayMode').value,logo_duration_ms:Number($('#logoDuration').value)*1000,leaderboard_duration_ms:Number($('#leaderboardDuration').value)*1000,map_duration_ms:Number($('#mapDuration').value)*1000,announcement_duration_ms:Number($('#announcementDuration').value)*1000,live_game_booth_1_enabled:$('#liveGameBooth1').checked,live_game_booth_2_enabled:$('#liveGameBooth2').checked};
+    const payload={display_mode:$('#displayMode').value,logo_duration_ms:Number($('#logoDuration').value)*1000,leaderboard_duration_ms:Number($('#leaderboardDuration').value)*1000,map_duration_ms:Number($('#mapDuration').value)*1000,announcement_duration_ms:Number($('#announcementDuration').value)*1000,live_game_booth_1_enabled:$('#liveGameBooth1').checked,live_trial_booth_1_enabled:$('#liveTrialBooth1').checked,live_game_booth_2_enabled:$('#liveGameBooth2').checked,live_trial_booth_2_enabled:$('#liveTrialBooth2').checked};
     const data=await displayApi('?type=display-settings',{method:'PATCH',body:JSON.stringify(payload)});displaySettings=data.settings;renderDisplaySettings();message.textContent='TV display updated.';
   }catch(error){message.textContent=error.message}
 });

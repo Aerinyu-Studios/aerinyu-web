@@ -32,10 +32,12 @@ export default async function handler(req,res){
       if(playerError||!player) return json(res,404,{error:'Player entry not found.'});
       if(player.current_attempt_nonce!==attempt.nonce||player.current_attempt_completed) return json(res,409,{error:'This attempt is no longer active.'});
 
-      const settings=await supabase.from('friendship_run_display_settings').select('live_game_booth_1_enabled,live_game_booth_2_enabled').eq('id',1).maybeSingle();
+      const settings=await supabase.from('friendship_run_display_settings').select('live_game_booth_1_enabled,live_trial_booth_1_enabled,live_game_booth_2_enabled,live_trial_booth_2_enabled').eq('id',1).maybeSingle();
       if(settings.error) throw settings.error;
       const enabled=boothId===1?settings.data?.live_game_booth_1_enabled!==false:settings.data?.live_game_booth_2_enabled!==false;
-      if(!enabled){
+      const trialEnabled=boothId===1?settings.data?.live_trial_booth_1_enabled!==false:settings.data?.live_trial_booth_2_enabled!==false;
+      const attemptAllowed=attempt.attempt_type==='trial'?trialEnabled:enabled;
+      if(!attemptAllowed){
         await deactivateLiveGame(supabase,attempt);
         return json(res,200,{ok:true,disabled:true});
       }
@@ -52,7 +54,7 @@ export default async function handler(req,res){
       const now=new Date().toISOString();
       const row={
         booth_id:boothId,player_id:player.id,attempt_nonce:attempt.nonce,player_name:player.name,
-        programme:player.programme||'',score,cells,snake,food:food||{},active,
+        programme:player.programme||'',attempt_type:attempt.attempt_type==='trial'?'trial':'official',score,cells,snake,food:food||{},active,
         started_at:new Date(attempt.started_at).toISOString(),updated_at:now
       };
       const upsert=await supabase.from('friendship_run_live_games').upsert(row,{onConflict:'booth_id'});

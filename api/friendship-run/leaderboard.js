@@ -3,7 +3,7 @@ import { access, friendlyDatabaseError, getSupabase, json } from '../../lib/frie
 const fallbackSettings = {
   id:1, display_mode:'cycle', logo_duration_ms:3200, leaderboard_duration_ms:12000,
   map_duration_ms:9000, announcement_duration_ms:9000,
-  live_game_booth_1_enabled:true, live_game_booth_2_enabled:true
+  live_game_booth_1_enabled:true, live_trial_booth_1_enabled:true, live_game_booth_2_enabled:true, live_trial_booth_2_enabled:true
 };
 
 export default async function handler(req,res){
@@ -26,16 +26,18 @@ export default async function handler(req,res){
     if(String(req.query?.live||'')==='1'){
       const boothId=[1,2].includes(Number(req.query?.booth))?Number(req.query.booth):1;
       const [settingsResult,liveResult]=await Promise.all([
-        supabase.from('friendship_run_display_settings').select('live_game_booth_1_enabled,live_game_booth_2_enabled').eq('id',1).maybeSingle(),
+        supabase.from('friendship_run_display_settings').select('live_game_booth_1_enabled,live_trial_booth_1_enabled,live_game_booth_2_enabled,live_trial_booth_2_enabled').eq('id',1).maybeSingle(),
         supabase.from('friendship_run_live_games').select('*').eq('booth_id',boothId).maybeSingle()
       ]);
       if(settingsResult.error) throw settingsResult.error;
       if(liveResult.error) throw liveResult.error;
       const enabled=boothId===1?settingsResult.data?.live_game_booth_1_enabled!==false:settingsResult.data?.live_game_booth_2_enabled!==false;
+      const trialEnabled=boothId===1?settingsResult.data?.live_trial_booth_1_enabled!==false:settingsResult.data?.live_trial_booth_2_enabled!==false;
       const row=liveResult.data;
       const fresh=row?.updated_at&&Date.now()-new Date(row.updated_at).getTime()<10000;
-      if(row?.active&&!fresh) await supabase.from('friendship_run_live_games').update({active:false}).eq('booth_id',boothId);
-      return json(res,200,{booth_id:boothId,enabled,live_game:enabled&&row?.active&&fresh?row:null});
+      const attemptAllowed=row?.attempt_type==='trial'?trialEnabled:enabled;
+      if(row?.active&&(!fresh||!attemptAllowed)) await supabase.from('friendship_run_live_games').update({active:false}).eq('booth_id',boothId);
+      return json(res,200,{booth_id:boothId,enabled,trial_enabled:trialEnabled,live_game:attemptAllowed&&row?.active&&fresh?row:null});
     }
 
     const {data,error}=await supabase.from('friendship_run_players')
